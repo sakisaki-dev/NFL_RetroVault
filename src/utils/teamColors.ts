@@ -21,7 +21,7 @@ export const TEAM_COLORS: Record<string, { primary: string; secondary: string }>
   // AFC West
   broncos: { primary: '20 100% 50%', secondary: '217 89% 35%' },
   chiefs: { primary: '0 92% 45%', secondary: '45 100% 50%' },
-  raiders: { primary: '0 0% 10%', secondary: '0 0% 75%' },
+  raiders: { primary: '0 0% 45%', secondary: '0 0% 20%' },
   chargers: { primary: '206 100% 42%', secondary: '45 100% 50%' },
   
   // NFC East

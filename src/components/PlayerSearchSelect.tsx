@@ -105,7 +105,7 @@ const PlayerSearchSelect = ({ players, value, onValueChange, placeholder = "Sear
                     }}
                     className={cn(
                       "flex items-center gap-3 cursor-pointer py-2.5 px-3 mx-1 my-0.5 rounded-lg transition-all",
-                      isSelected ? "bg-primary/10" : "hover:bg-secondary/50"
+                      isSelected ? "bg-secondary/80" : "hover:bg-secondary/40"
                     )}
                     style={playerTeamColors ? {
                       borderLeft: `3px solid hsl(${playerTeamColors.primary} / 0.6)`
