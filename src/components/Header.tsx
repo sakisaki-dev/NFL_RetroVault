@@ -1,5 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar } from 'lucide-react';
+import { Calendar, Scale } from 'lucide-react';
 import { useLeague } from '@/context/LeagueContext';
 
 interface HeaderProps {
@@ -77,6 +77,12 @@ const Header = ({ activeTab, onTabChange }: HeaderProps) => {
                 className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all"
               >
                 Records
+              </TabsTrigger>
+              <TabsTrigger 
+                value="compare"
+                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all"
+              >
+                Compare
               </TabsTrigger>
               <TabsTrigger 
                 value="commentary"

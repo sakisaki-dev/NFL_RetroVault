@@ -6,6 +6,7 @@ import CommentaryTab from '@/components/tabs/CommentaryTab';
 import HallOfFameTab from '@/components/tabs/HallOfFameTab';
 import RecordsTab from '@/components/tabs/RecordsTab';
 import TeamRankingsTab from '@/components/tabs/TeamRankingsTab';
+import ComparisonTab from '@/components/tabs/ComparisonTab';
 import { LeagueProvider, useLeague } from '@/context/LeagueContext';
 import { Helmet } from 'react-helmet-async';
 
@@ -45,6 +46,7 @@ const IndexContent = () => {
           {activeTab === 'teams' && <TeamRankingsTab />}
           {activeTab === 'hof' && <HallOfFameTab />}
           {activeTab === 'records' && <RecordsTab />}
+          {activeTab === 'compare' && <ComparisonTab />}
           {activeTab === 'commentary' && <CommentaryTab />}
         </main>
 
