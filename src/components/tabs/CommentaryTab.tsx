@@ -82,6 +82,7 @@ const CommentaryTab = () => {
     ];
 
     const activePlayers = allPlayers.filter((p) => p.status === 'Active');
+    const retiredPlayers = allPlayers.filter((p) => p.status === 'Retired');
     const hofPlayers = allPlayers.filter((p) => p.careerLegacy >= 8000);
     const legendaryPlayers = allPlayers.filter((p) => p.careerLegacy >= 12000);
 
@@ -89,6 +90,28 @@ const CommentaryTab = () => {
     const topByTPG = [...activePlayers].sort((a, b) => b.tpg - a.tpg).slice(0, 5);
     const topByRings = [...allPlayers].sort((a, b) => b.rings - a.rings).slice(0, 5);
     const topByMVP = [...allPlayers].filter((p) => p.mvp > 0).sort((a, b) => b.mvp - a.mvp).slice(0, 5);
+    const topByDominance = [...allPlayers].sort((a, b) => b.dominance - a.dominance).slice(0, 5);
+    const topByTrueTalent = [...allPlayers].sort((a, b) => b.trueTalent - a.trueTalent).slice(0, 5);
+
+    // Position-specific sorting
+    const qbsByLegacy = [...careerData.quarterbacks].sort((a, b) => b.careerLegacy - a.careerLegacy);
+    const rbsByLegacy = [...careerData.runningbacks].sort((a, b) => b.careerLegacy - a.careerLegacy);
+    const wrsByLegacy = [...careerData.widereceivers].sort((a, b) => b.careerLegacy - a.careerLegacy);
+    const defByLegacy = [...careerData.linebackers, ...careerData.defensivebacks, ...careerData.defensiveline].sort((a, b) => b.careerLegacy - a.careerLegacy);
+
+    // Veterans (high games played)
+    const veterans = activePlayers.filter((p) => p.games >= 128).sort((a, b) => b.games - a.games);
+    
+    // Rookies / Young players (low games)
+    const rookies = activePlayers.filter((p) => p.games <= 16 && p.games > 0).sort((a, b) => b.tpg - a.tpg);
+    
+    // Underperformers (high talent, low legacy ratio)
+    const underperformers = activePlayers.filter((p) => p.trueTalent >= 700 && p.rings === 0 && p.mvp === 0).slice(0, 5);
+    
+    // Award collectors (opoy field is used for both OPOY and DPOY depending on position)
+    const multiAwardWinners = allPlayers.filter((p) => (p.mvp + p.opoy + p.sbmvp + p.roty) >= 3).sort((a, b) => 
+      (b.mvp + b.opoy + b.sbmvp + b.roty) - (a.mvp + a.opoy + a.sbmvp + a.roty)
+    );
 
     const newsStories: NewsStory[] = [];
     let storyId = 0;
@@ -103,6 +126,8 @@ const CommentaryTab = () => {
       const topQB = qbs.length > 0 ? qbs.reduce((a, b) => (a?.passYds > b?.passYds ? a : b), qbs[0]) : null;
       const topRB = rbs.length > 0 ? rbs.reduce((a, b) => (a?.rushYds > b?.rushYds ? a : b), rbs[0]) : null;
       const topWR = wrs.length > 0 ? wrs.reduce((a, b) => (a?.recYds > b?.recYds ? a : b), wrs[0]) : null;
+      const topTE = tes.length > 0 ? tes.reduce((a, b) => (a?.recYds > b?.recYds ? a : b), tes[0]) : null;
+      const topRusherTD = rbs.length > 0 ? rbs.reduce((a, b) => (a?.rushTD > b?.rushTD ? a : b), rbs[0]) : null;
 
       // MVP Race
       if (topQB && topRB && topQB.passYds > 0 && topRB.rushYds > 0) {
@@ -126,14 +151,30 @@ const CommentaryTab = () => {
         const careerQB = careerData.quarterbacks.find((q) => q.name === topQB.name) || topQB;
         newsStories.push({
           id: `story-${storyId++}`,
-          headline: `${topQB.name.split(' ').pop().toUpperCase()} ENTERS HISTORY BOOKS`,
+          headline: `${topQB.name.split(' ').pop()?.toUpperCase()} ENTERS HISTORY BOOKS`,
           subheadline: `5,000-yard season achieved`,
           body: `An elite performance that will be remembered for generations.`,
-          fullContent: `We are witnessing greatness in its purest form.\n\n**${topQB.name}** just put up ${topQB.passYds.toLocaleString()} passing yards — joining the exclusive 5,000-yard club. Only the truly elite ever reach this milestone.\n\n${topQB.passTD} touchdown passes. A passer rating that makes defensive coordinators lose sleep. This isn't just a great season. This is LEGENDARY.\n\n${careerQB.rings > 0 ? `With ${careerQB.rings} ring(s) already, this season adds another chapter to an already Hall of Fame resume.` : 'Now the mission is to turn this brilliance into a championship run.'}`,
+          fullContent: `We are witnessing greatness in its purest form.\n\n**${topQB.name}** just put up ${topQB.passYds.toLocaleString()} passing yards — joining the exclusive 5,000-yard club. Only the truly elite ever reach this milestone.\n\n${topQB.passTD} touchdown passes. A passer rating that makes defensive coordinators lose sleep. This is not just a great season. This is LEGENDARY.\n\n${careerQB.rings > 0 ? `With ${careerQB.rings} ring(s) already, this season adds another chapter to an already Hall of Fame resume.` : 'Now the mission is to turn this brilliance into a championship run.'}`,
           player: careerQB,
           tier: 'breaking',
           icon: Flame,
           category: 'Historic Season',
+        });
+      }
+
+      // TD Machine - RB with 15+ rushing TDs
+      if (topRusherTD && topRusherTD.rushTD >= 15) {
+        const careerRB = careerData.runningbacks.find((r) => r.name === topRusherTD.name) || topRusherTD;
+        newsStories.push({
+          id: `story-${storyId++}`,
+          headline: `TOUCHDOWN MACHINE`,
+          subheadline: `${topRusherTD.name} is unstoppable in the red zone`,
+          body: `${topRusherTD.rushTD} rushing touchdowns this season. Defenses have no answer.`,
+          fullContent: `When the ball is on the goal line, there is only one player you want carrying it.\n\n**${topRusherTD.name}** has ${topRusherTD.rushTD} rushing touchdowns — a number that puts fear into every defensive coordinator.\n\n${topRusherTD.rushYds.toLocaleString()} rushing yards to go with it. This is not just a goal-line back. This is a complete force.\n\n${careerRB.rings > 0 ? `With ${careerRB.rings} championship ring(s), they know how to finish.` : 'A championship would be the cherry on top of this elite season.'}`,
+          player: careerRB,
+          tier: 'hot-take',
+          icon: Zap,
+          category: 'Red Zone Report',
         });
       }
 
@@ -145,11 +186,27 @@ const CommentaryTab = () => {
           headline: `UNSTOPPABLE`,
           subheadline: `${topWR.name} is the best receiver in football`,
           body: `${topWR.recYds.toLocaleString()} receiving yards. The debate is over.`,
-          fullContent: `**${topWR.name}** is playing a different sport than everyone else.\n\n${topWR.receptions} receptions. ${topWR.recYds.toLocaleString()} yards. ${topWR.recTD} touchdowns.\n\nDefensive coordinators are game-planning specifically for this player and it doesn't matter. Double coverage? Doesn't matter. Triple coverage? Still getting open.\n\n${careerWR.opoy > 0 ? `A ${careerWR.opoy}x OPOY winner proving why.` : 'An OPOY award feels inevitable.'} ${careerWR.rings > 0 ? `And yes, they've got the rings (${careerWR.rings}) to back it up.` : ''}`,
+          fullContent: `**${topWR.name}** is playing a different sport than everyone else.\n\n${topWR.receptions} receptions. ${topWR.recYds.toLocaleString()} yards. ${topWR.recTD} touchdowns.\n\nDefensive coordinators are game-planning specifically for this player and it does not matter. Double coverage? Does not matter. Triple coverage? Still getting open.\n\n${careerWR.opoy > 0 ? `A ${careerWR.opoy}x OPOY winner proving why.` : 'An OPOY award feels inevitable.'} ${careerWR.rings > 0 ? `And yes, they have got the rings (${careerWR.rings}) to back it up.` : ''}`,
           player: careerWR,
           tier: 'hot-take',
           icon: Zap,
           category: 'Elite Performance',
+        });
+      }
+
+      // TE Breakout
+      if (topTE && topTE.recYds >= 900) {
+        const careerTE = careerData.tightends.find((t) => t.name === topTE.name) || topTE;
+        newsStories.push({
+          id: `story-${storyId++}`,
+          headline: `THE TE REVOLUTION`,
+          subheadline: `${topTE.name} redefining the position`,
+          body: `Tight ends are the new weapon. ${topTE.recYds.toLocaleString()} yards proves it.`,
+          fullContent: `The modern NFL tight end is not your father's blocking specialist.\n\n**${topTE.name}** is putting up receiver numbers from the tight end position: ${topTE.receptions} catches, ${topTE.recYds.toLocaleString()} yards, ${topTE.recTD} touchdowns.\n\nThis kind of production creates mismatches that are impossible to solve. Too big for corners. Too fast for linebackers.\n\n${careerTE.trueTalent >= 700 ? `With a ${careerTE.trueTalent.toFixed(0)} True Talent rating, this is generational ability.` : 'This breakout season could be just the beginning.'}`,
+          player: careerTE,
+          tier: 'analysis',
+          icon: TrendingUp,
+          category: 'Position Watch',
         });
       }
 
@@ -196,7 +253,7 @@ const CommentaryTab = () => {
         headline: `THE GOAT DEBATE`,
         subheadline: `Who is the greatest of all time?`,
         body: `${goat.name} leads all-time with ${goat.careerLegacy.toFixed(0)} legacy points.`,
-        fullContent: `The question that never dies: Who is the greatest player in league history?\n\nBy the numbers, **${goat.name}** has the strongest case:\n\n• ${goat.careerLegacy.toFixed(0)} Career Legacy\n• ${goat.rings} Championship(s)\n• ${goat.mvp} MVP(s)\n• ${goat.trueTalent.toFixed(0)} True Talent\n\nBut the GOAT debate is never just about numbers. It's about moments. It's about dominance. It's about changing the game.\n\n**The Top 5 All-Time:**\n${topByLegacy.slice(0, 5).map((p, i) => `${i + 1}. ${p.name} — ${p.careerLegacy.toFixed(0)}`).join('\n')}`,
+        fullContent: `The question that never dies: Who is the greatest player in league history?\n\nBy the numbers, **${goat.name}** has the strongest case:\n\n• ${goat.careerLegacy.toFixed(0)} Career Legacy\n• ${goat.rings} Championship(s)\n• ${goat.mvp} MVP(s)\n• ${goat.trueTalent.toFixed(0)} True Talent\n\nBut the GOAT debate is never just about numbers. It is about moments. It is about dominance. It is about changing the game.\n\n**The Top 5 All-Time:**\n${topByLegacy.slice(0, 5).map((p, i) => `${i + 1}. ${p.name} — ${p.careerLegacy.toFixed(0)}`).join('\n')}`,
         player: goat,
         players: topByLegacy.slice(0, 5),
         tier: 'analysis',
@@ -213,12 +270,46 @@ const CommentaryTab = () => {
         headline: `EFFICIENCY KINGS`,
         subheadline: `Maximum impact, every snap`,
         body: `${effKing.name} leads with ${effKing.tpg.toFixed(2)} TPG.`,
-        fullContent: `In the modern game, efficiency is everything. **${effKing.name}** is the master of it.\n\n${effKing.tpg.toFixed(2)} Talent Per Game means every time they step on the field, they're producing at an elite level.\n\n**TPG Leaders:**\n${topByTPG.map((p, i) => `${i + 1}. ${p.name} (${p.position}) — ${p.tpg.toFixed(2)} TPG`).join('\n')}\n\nThese players don't pad stats. They win games.`,
+        fullContent: `In the modern game, efficiency is everything. **${effKing.name}** is the master of it.\n\n${effKing.tpg.toFixed(2)} Talent Per Game means every time they step on the field, they are producing at an elite level.\n\n**TPG Leaders:**\n${topByTPG.map((p, i) => `${i + 1}. ${p.name} (${p.position}) — ${p.tpg.toFixed(2)} TPG`).join('\n')}\n\nThese players do not pad stats. They win games.`,
         player: effKing,
         players: topByTPG,
         tier: 'power-ranking',
         icon: Target,
         category: 'Analytics',
+      });
+    }
+
+    // Dominance Rankings
+    if (topByDominance.length > 0) {
+      const domKing = topByDominance[0];
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `PEAK DOMINANCE`,
+        subheadline: `The most dominant players ever`,
+        body: `${domKing.name} leads with ${domKing.dominance.toFixed(0)} dominance rating.`,
+        fullContent: `Dominance measures how much a player outperformed their peers at their peak.\n\n**${domKing.name}** sits at the top with a staggering ${domKing.dominance.toFixed(0)} dominance score.\n\n**Most Dominant Players:**\n${topByDominance.map((p, i) => `${i + 1}. ${p.name} (${p.position}) — ${p.dominance.toFixed(0)}`).join('\n')}\n\nThese are the players who made everyone else look average.`,
+        player: domKing,
+        players: topByDominance,
+        tier: 'power-ranking',
+        icon: BarChart3,
+        category: 'Analytics Deep Dive',
+      });
+    }
+
+    // Pure Talent Rankings
+    if (topByTrueTalent.length > 0) {
+      const talentKing = topByTrueTalent[0];
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `PURE TALENT`,
+        subheadline: `Raw ability at its finest`,
+        body: `${talentKing.name} has a ${talentKing.trueTalent.toFixed(0)} True Talent rating.`,
+        fullContent: `True Talent strips away context and measures pure ability.\n\n**${talentKing.name}** is the most talented player in league history with a ${talentKing.trueTalent.toFixed(0)} rating.\n\n**Top 5 Most Talented:**\n${topByTrueTalent.map((p, i) => `${i + 1}. ${p.name} (${p.position}) — ${talentKing.trueTalent.toFixed(0)}`).join('\n')}\n\nTalent does not guarantee championships — but it is the foundation of greatness.`,
+        player: talentKing,
+        players: topByTrueTalent,
+        tier: 'analysis',
+        icon: Star,
+        category: 'Talent Evaluation',
       });
     }
 
@@ -239,6 +330,163 @@ const CommentaryTab = () => {
         });
       }
     }
+
+    // Veteran Watch
+    if (veterans.length > 0) {
+      const ironMan = veterans[0];
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `IRON MAN WATCH`,
+        subheadline: `${ironMan.name} defies Father Time`,
+        body: `${ironMan.games} games and still going strong.`,
+        fullContent: `Longevity in this league is earned, not given.\n\n**${ironMan.name}** has played ${ironMan.games} games — a testament to elite conditioning, smart play, and sheer determination.\n\n**Active Veterans (128+ games):**\n${veterans.slice(0, 5).map((p) => `• ${p.name} (${p.position}) — ${p.games} games`).join('\n')}\n\nEvery snap at this stage is a gift. These players are still competing at the highest level.`,
+        player: ironMan,
+        players: veterans.slice(0, 5),
+        tier: 'milestone',
+        icon: Medal,
+        category: 'Longevity',
+      });
+    }
+
+    // Rookie Impact
+    if (rookies.length > 0) {
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `ROOKIE IMPACT`,
+        subheadline: `First-year players making noise`,
+        body: `The future is now for these young talents.`,
+        fullContent: `Every great career starts somewhere. These rookies are making immediate impact.\n\n**Top Rookie Performers:**\n${rookies.slice(0, 5).map((p) => `• **${p.name}** (${p.position}) — ${p.tpg.toFixed(2)} TPG in ${p.games} games`).join('\n')}\n\nROTY candidates are emerging. The next generation has arrived.`,
+        players: rookies.slice(0, 5),
+        tier: 'milestone',
+        icon: Sparkles,
+        category: 'Rookie Watch',
+      });
+    }
+
+    // Position GOAT debates
+    if (qbsByLegacy.length >= 3) {
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `QB GOAT DEBATE`,
+        subheadline: `The greatest quarterbacks of all time`,
+        body: `${qbsByLegacy[0].name} leads all QBs with ${qbsByLegacy[0].careerLegacy.toFixed(0)} legacy.`,
+        fullContent: `The most important position in football. Who is the greatest to ever do it?\n\n**All-Time QB Rankings:**\n${qbsByLegacy.slice(0, 5).map((p, i) => `${i + 1}. ${p.name} — ${p.careerLegacy.toFixed(0)} Legacy, ${p.rings} Rings, ${p.mvp} MVPs`).join('\n')}\n\nRings matter. Stats matter. Moments matter. The debate rages on.`,
+        player: qbsByLegacy[0],
+        players: qbsByLegacy.slice(0, 5),
+        tier: 'analysis',
+        icon: Crown,
+        category: 'Position Rankings',
+      });
+    }
+
+    if (rbsByLegacy.length >= 3) {
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `RB LEGENDS`,
+        subheadline: `The greatest running backs of all time`,
+        body: `${rbsByLegacy[0].name} leads all RBs with ${rbsByLegacy[0].careerLegacy.toFixed(0)} legacy.`,
+        fullContent: `Running back is the most punishing position. These players conquered it.\n\n**All-Time RB Rankings:**\n${rbsByLegacy.slice(0, 5).map((p, i) => `${i + 1}. ${p.name} — ${p.careerLegacy.toFixed(0)} Legacy, ${p.rings} Rings`).join('\n')}\n\nYards. Touchdowns. Broken tackles. Championship runs. The complete package.`,
+        player: rbsByLegacy[0],
+        players: rbsByLegacy.slice(0, 5),
+        tier: 'analysis',
+        icon: Trophy,
+        category: 'Position Rankings',
+      });
+    }
+
+    if (wrsByLegacy.length >= 3) {
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `WR ROYALTY`,
+        subheadline: `The greatest receivers of all time`,
+        body: `${wrsByLegacy[0].name} leads all WRs with ${wrsByLegacy[0].careerLegacy.toFixed(0)} legacy.`,
+        fullContent: `The playmakers. The game-breakers. The ones who make the impossible catch.\n\n**All-Time WR Rankings:**\n${wrsByLegacy.slice(0, 5).map((p, i) => `${i + 1}. ${p.name} — ${p.careerLegacy.toFixed(0)} Legacy, ${p.rings} Rings`).join('\n')}\n\nCatching touchdowns and breaking hearts. These are the legends.`,
+        player: wrsByLegacy[0],
+        players: wrsByLegacy.slice(0, 5),
+        tier: 'hot-take',
+        icon: Zap,
+        category: 'Position Rankings',
+      });
+    }
+
+    if (defByLegacy.length >= 3) {
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `DEFENSIVE DOMINANCE`,
+        subheadline: `The greatest defenders of all time`,
+        body: `${defByLegacy[0].name} leads all defenders with ${defByLegacy[0].careerLegacy.toFixed(0)} legacy.`,
+        fullContent: `Offense wins games. Defense wins championships. These players prove it.\n\n**All-Time Defensive Rankings:**\n${defByLegacy.slice(0, 5).map((p, i) => `${i + 1}. ${p.name} (${p.position}) — ${p.careerLegacy.toFixed(0)} Legacy, ${p.rings} Rings`).join('\n')}\n\nFear-inducing, game-wrecking, championship-winning defenders.`,
+        player: defByLegacy[0],
+        players: defByLegacy.slice(0, 5),
+        tier: 'power-ranking',
+        icon: Target,
+        category: 'Position Rankings',
+      });
+    }
+
+    // Award Collectors
+    if (multiAwardWinners.length > 0) {
+      const collector = multiAwardWinners[0];
+      const isDefensive = ['LB', 'DB', 'DL'].includes(collector.position);
+      const totalAwards = collector.mvp + collector.opoy + collector.sbmvp + collector.roty;
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `HARDWARE COLLECTION`,
+        subheadline: `The most decorated players ever`,
+        body: `${collector.name} has won ${totalAwards} major individual awards.`,
+        fullContent: `Awards are the ultimate recognition. These players have collected them all.\n\n**${collector.name}:**\n${collector.mvp > 0 ? `• ${collector.mvp}x MVP\n` : ''}${collector.opoy > 0 ? `• ${collector.opoy}x ${isDefensive ? 'DPOY' : 'OPOY'}\n` : ''}${collector.sbmvp > 0 ? `• ${collector.sbmvp}x Super Bowl MVP\n` : ''}${collector.roty > 0 ? `• ${collector.roty}x ROTY\n` : ''}\n**Most Decorated Players:**\n${multiAwardWinners.slice(0, 5).map((p) => `• ${p.name} — ${p.mvp + p.opoy + p.sbmvp + p.roty} awards`).join('\n')}`,
+        player: collector,
+        players: multiAwardWinners.slice(0, 5),
+        tier: 'milestone',
+        icon: Award,
+        category: 'Award Watch',
+      });
+    }
+
+    // Ringless Stars - Great players without championships
+    if (underperformers.length > 0) {
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `RINGLESS STARS`,
+        subheadline: `Elite talent still chasing glory`,
+        body: `These stars have the talent. Can they get the ring?`,
+        fullContent: `Championships are the ultimate goal. These elite players are still searching.\n\n**Stars Without Rings:**\n${underperformers.map((p) => `• **${p.name}** (${p.position}) — ${p.trueTalent.toFixed(0)} True Talent`).join('\n')}\n\nThe window is closing. Every season matters. Will this be the year?`,
+        players: underperformers,
+        tier: 'controversy',
+        icon: AlertTriangle,
+        category: 'Championship Chase',
+      });
+    }
+
+    // Recent Retirements
+    if (retiredPlayers.length > 0) {
+      const recentRetirees = retiredPlayers.sort((a, b) => b.careerLegacy - a.careerLegacy).slice(0, 5);
+      newsStories.push({
+        id: `story-${storyId++}`,
+        headline: `END OF AN ERA`,
+        subheadline: `Legends who have hung up their cleats`,
+        body: `${recentRetirees.length} players have retired. Their legacy lives on.`,
+        fullContent: `All careers must end. These players finished theirs with distinction.\n\n**Notable Retirements:**\n${recentRetirees.map((p) => `• **${p.name}** (${p.position}) — ${p.games} games, ${p.rings} Rings, ${p.careerLegacy.toFixed(0)} Legacy`).join('\n')}\n\nThe jersey is retired. The memories remain forever.`,
+        players: recentRetirees,
+        tier: 'milestone',
+        icon: Medal,
+        category: 'Retirement',
+      });
+    }
+
+    // League Parity Check
+    const avgLegacy = allPlayers.reduce((sum, p) => sum + p.careerLegacy, 0) / allPlayers.length;
+    const avgTPG = activePlayers.reduce((sum, p) => sum + p.tpg, 0) / activePlayers.length;
+    newsStories.push({
+      id: `story-${storyId++}`,
+      headline: `STATE OF THE LEAGUE`,
+      subheadline: `By the numbers`,
+      body: `${allPlayers.length} players. ${activePlayers.length} active. ${hofPlayers.length} Hall of Famers.`,
+      fullContent: `A comprehensive look at where the league stands.\n\n**League Statistics:**\n• Total Players: ${allPlayers.length}\n• Active Players: ${activePlayers.length}\n• Retired Players: ${retiredPlayers.length}\n• Hall of Famers: ${hofPlayers.length}\n• Legendary Players: ${legendaryPlayers.length}\n\n**Averages:**\n• Average Career Legacy: ${avgLegacy.toFixed(0)}\n• Average TPG (Active): ${avgTPG.toFixed(2)}\n\nThe league is ${legendaryPlayers.length >= 5 ? 'rich with elite talent' : 'still building its legends'}.`,
+      tier: 'analysis',
+      icon: BarChart3,
+      category: 'League Report',
+    });
 
     return {
       stories: newsStories,
