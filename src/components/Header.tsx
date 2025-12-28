@@ -1,17 +1,14 @@
 import { useRef, useEffect, useState } from 'react';
-import { Calendar, Settings } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { useLeague } from '@/context/LeagueContext';
 import { cn } from '@/lib/utils';
-import SeasonManagementDialog from './SeasonManagementDialog';
-import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  onDataCleared: () => void;
 }
 
-// Retro pixel-style football icon
+// Retro pixel-style football icon - colorful
 const RetroFootballIcon = () => (
   <svg viewBox="0 0 32 32" fill="none" className="w-10 h-10 drop-shadow-lg">
     <ellipse cx="16" cy="16" rx="14" ry="10" fill="#8B4513" />
@@ -35,13 +32,12 @@ const tabs = [
   { value: 'commentary', label: 'Commentary' },
 ];
 
-const Header = ({ activeTab, onTabChange, onDataCleared }: HeaderProps) => {
+const Header = ({ activeTab, onTabChange }: HeaderProps) => {
   const { currentSeason } = useLeague();
   const navRef = useRef<HTMLDivElement | null>(null);
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const [isAnimating, setIsAnimating] = useState(false);
-  const [showManagement, setShowManagement] = useState(false);
 
   useEffect(() => {
     const updateIndicator = () => {
@@ -73,85 +69,68 @@ const Header = ({ activeTab, onTabChange, onDataCleared }: HeaderProps) => {
   };
 
   return (
-    <>
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border/20">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center h-20">
-            {/* Logo */}
-            <div className="flex items-center gap-3 justify-self-start">
-              <RetroFootballIcon />
-              <div>
-                <span className="font-display text-2xl font-bold tracking-tight text-foreground">
-                  Retro Vault
-                </span>
-                <p className="text-xs text-muted-foreground tracking-wide">League Analytics</p>
-              </div>
+    <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border/20">
+      <div className="container mx-auto px-6">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center h-20">
+          {/* Logo */}
+          <div className="flex items-center gap-3 justify-self-start">
+            <RetroFootballIcon />
+            <div>
+              <span className="font-display text-2xl font-bold tracking-tight text-foreground">
+                Retro Vault
+              </span>
+              <p className="text-xs text-muted-foreground tracking-wide">League Analytics</p>
             </div>
+          </div>
 
-            {/* Navigation with fluid indicator (centered) */}
+          {/* Navigation with fluid indicator (centered) */}
+          <div
+            ref={navRef}
+            className="relative justify-self-center bg-secondary/50 backdrop-blur-sm border border-border/20 p-1.5 rounded-full"
+          >
+            {/* Fluid animated indicator - solid black */}
             <div
-              ref={navRef}
-              className="relative justify-self-center bg-secondary/50 backdrop-blur-sm border border-border/20 p-1.5 rounded-full"
-            >
-              {/* Fluid animated indicator - solid */}
-              <div
-                className="absolute top-1.5 bottom-1.5 rounded-full bg-background shadow-sm"
-                style={{
-                  left: `${indicatorStyle.left}px`,
-                  width: `${indicatorStyle.width}px`,
-                  transform: isAnimating ? 'scaleX(1.06) scaleY(0.92)' : 'scaleX(1) scaleY(1)',
-                  transformOrigin: 'center',
-                  transition: isAnimating
-                    ? 'left 420ms cubic-bezier(0.4, 0, 0.2, 1), width 420ms cubic-bezier(0.4, 0, 0.2, 1), transform 420ms cubic-bezier(0.4, 0, 0.2, 1)'
-                    : 'left 320ms cubic-bezier(0.4, 0, 0.2, 1), width 320ms cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              />
+              className="absolute top-1.5 bottom-1.5 rounded-full bg-background shadow-sm"
+              style={{
+                left: `${indicatorStyle.left}px`,
+                width: `${indicatorStyle.width}px`,
+                transform: isAnimating ? 'scaleX(1.06) scaleY(0.92)' : 'scaleX(1) scaleY(1)',
+                transformOrigin: 'center',
+                transition: isAnimating
+                  ? 'left 420ms cubic-bezier(0.4, 0, 0.2, 1), width 420ms cubic-bezier(0.4, 0, 0.2, 1), transform 420ms cubic-bezier(0.4, 0, 0.2, 1)'
+                  : 'left 320ms cubic-bezier(0.4, 0, 0.2, 1), width 320ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            />
 
-              {/* Tab buttons */}
-              <div className="relative flex gap-0">
-                {tabs.map((tab, index) => (
-                  <button
-                    key={tab.value}
-                    ref={(el) => (tabsRef.current[index] = el)}
-                    onClick={() => handleTabClick(tab.value)}
-                    className={cn(
-                      "relative z-10 rounded-full px-5 py-2 text-sm font-medium whitespace-nowrap flex items-center justify-center transition-colors duration-200",
-                      activeTab === tab.value ? "text-foreground" : "text-muted-foreground"
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+            {/* Tab buttons */}
+            <div className="relative flex gap-0">
+              {tabs.map((tab, index) => (
+                <button
+                  key={tab.value}
+                  ref={(el) => (tabsRef.current[index] = el)}
+                  onClick={() => handleTabClick(tab.value)}
+                  className={cn(
+                    "relative z-10 rounded-full px-5 py-2 text-sm font-medium whitespace-nowrap flex items-center justify-center transition-colors duration-200",
+                    activeTab === tab.value ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
+          </div>
 
-            {/* Season indicator + Settings button (top right) */}
-            <div className="flex items-center gap-3 justify-self-end">
-              <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
-                <Calendar className="w-4 h-4 text-accent" />
-                <span className="text-sm text-muted-foreground">Season</span>
-                <span className="font-display text-lg font-bold text-accent">{currentSeason}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowManagement(true)}
-                className="rounded-full"
-                aria-label="Data Management"
-              >
-                <Settings className="w-5 h-5" />
-              </Button>
+          {/* Season indicator */}
+          <div className="justify-self-end">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
+              <Calendar className="w-4 h-4 text-accent" />
+              <span className="text-sm text-muted-foreground">Season</span>
+              <span className="font-display text-lg font-bold text-accent">{currentSeason}</span>
             </div>
           </div>
         </div>
-      </header>
-
-      <SeasonManagementDialog
-        open={showManagement}
-        onOpenChange={setShowManagement}
-        onDataCleared={onDataCleared}
-      />
-    </>
+      </div>
+    </header>
   );
 };
 

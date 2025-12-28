@@ -1,95 +1,73 @@
-# NFL RetroVault
+# Welcome to your Lovable project
 
-**NFL RetroVault** is a **local-first analytics tool** designed for exploring and comparing NFL Retro Bowl–style player statistics across multiple seasons. It allows users to **compile season data manually** (from spreadsheets or CSVs) into a persistent local database, then **analyze, compare, and visualize** player performance over time.  
+## Project info
 
-This tool is ideal for fans, analysts, or hobbyists who want to **track player stats longitudinally**, compare seasons, and see historical trends without relying on a server or cloud storage.  
+**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 
----
+## How can I edit this code?
 
-## Acknowledgements
+There are several ways of editing your application.
 
-The initial **UI prototyping** for this project was assisted using [Loveable](https://www.lovable.dev). All **architecture, persistence, data handling, and logic** have been independently implemented and maintained by the developer.   
+**Use Lovable**
 
----
+Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
 
-## Features
+Changes made via Lovable will be committed automatically to this repo.
 
-- **Season-based stat tracking:** Upload CSVs or manually compile stats for each season.  
-- **Player comparison:** Quickly compare multiple players across different seasons.  
-- **Historical data view:** Tap on a player to see previous season stats.  
-- **Local-first persistence:** All data is stored in the browser using IndexedDB, surviving browser restarts.  
-- **Privacy-friendly:** No external servers or cloud storage are used; all analysis occurs locally.  
-- **Clean and responsive UI:** Built with React, TypeScript, Vite, Tailwind CSS, and shadcn/ui components.
+**Use your preferred IDE**
 
----
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-## Tech Stack
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-- **Frontend:** React + TypeScript  
-- **Bundler:** Vite  
-- **Styling:** Tailwind CSS  
-- **UI Components:** shadcn/ui  
-- **Persistence:** IndexedDB (via `idb`) for local data storage  
-- **Data Input:** CSVs exported from spreadsheets or manual entry  
+Follow these steps:
 
----
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-## How It Works
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-1. **Prepare Your Data:**  
-   - Create or update a spreadsheet with player statistics for a given season.  
-   - Export the sheet to CSV format.  
+# Step 3: Install the necessary dependencies.
+npm i
 
-2. **Upload CSV:**  
-   - Use the app interface to upload season data.  
-   - Each player row is saved locally in IndexedDB and tagged by season.  
-
-3. **Analyze and Compare:**  
-   - Select players to view individual stats and career trends.  
-   - Compare multiple players across different seasons.  
-
-4. **Persistence:**  
-   - Data persists in IndexedDB locally.  
-   - Closing or refreshing the browser does not erase stored data.  
-
-5. **Reset or Update:**  
-   - Clear the database if needed to start a new analysis.  
-   - Upload additional CSVs for new seasons, appending to the existing database.  
-
----
-
-## Getting Started (Local Development)
-
-Clone the repository and install dependencies:
-
-```bash
-git clone https://github.com/sakisaki-dev/NFL_RetroVault.git
-cd NFL_RetroVault
-npm install
+# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
+**Edit a file directly in GitHub**
 
-## Project Structure ## 
-```
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-NFL_RetroVault/
-├─ src/
-│  ├─ components/       # React UI components
-│  ├─ lib/              # Non-UI logic (CSV parsing, IndexedDB [in progress], analytics)
-│  ├─ types/            # TypeScript type definitions
-│  ├─ pages/            # Page-level React components
-│  └─ main.tsx          # App entry point
-├─ index.html
-├─ package.json
-├─ package-lock.json
-├─ tsconfig.json
-├─ vite.config.ts
-├─ tailwind.config.ts
-├─ postcss.config.js
-└─ README.md
-```
+**Use GitHub Codespaces**
 
-## Contact ## 
-Email: samachir@ucsc.edu
-Name: Saketh Machiraju
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
+
+## What technologies are used for this project?
+
+This project is built with:
+
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+## How can I deploy this project?
+
+Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+
+## Can I connect a custom domain to my Lovable project?
+
+Yes, you can!
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
