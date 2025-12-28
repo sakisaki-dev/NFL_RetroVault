@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { useLeague } from '@/context/LeagueContext';
-import { Newspaper, Trophy, Award, Star, TrendingUp, Calendar, Users } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import type { Player, QBPlayer, RBPlayer } from '@/types/player';
+import { Newspaper, Trophy, Star, TrendingUp, Crown, AlertCircle } from 'lucide-react';
+import type { Player, QBPlayer, RBPlayer, WRPlayer, TEPlayer, LBPlayer, DBPlayer, DLPlayer } from '@/types/player';
+import PositionBadge from '../PositionBadge';
+import { getTeamColors } from '@/utils/teamColors';
 
 const CommentaryTab = () => {
-  const { careerData, seasonData, previousData, currentSeason } = useLeague();
+  const { careerData, seasonData, currentSeason } = useLeague();
 
-  const analysis = useMemo(() => {
+  const commentary = useMemo(() => {
     if (!careerData) return null;
 
     const allPlayers: Player[] = [
@@ -21,422 +22,328 @@ const CommentaryTab = () => {
       ...careerData.defensiveline,
     ];
 
-    const activePlayers = allPlayers.filter(p => p.status === 'Active');
-    const retiredPlayers = allPlayers.filter(p => p.status === 'Retired');
+    const activePlayers = allPlayers.filter((p) => p.status === 'Active');
+    const hofPlayers = allPlayers.filter((p) => p.careerLegacy >= 5000);
+    const legendaryPlayers = allPlayers.filter((p) => p.careerLegacy >= 8000);
 
-    // MVP candidates by true talent (active only)
-    const mvpCandidates = [...activePlayers]
-      .sort((a, b) => b.trueTalent - a.trueTalent)
-      .slice(0, 5)
-      .map((p, i) => ({
-        name: p.name.split(' ').pop() || p.name,
-        fullName: p.name,
-        value: Math.round((5 - i) * 20),
-        trueTalent: p.trueTalent,
-        position: p.position,
-      }));
+    // Top by various metrics
+    const topByLegacy = [...allPlayers].sort((a, b) => b.careerLegacy - a.careerLegacy).slice(0, 5);
+    const topByTPG = [...activePlayers].sort((a, b) => b.tpg - a.tpg).slice(0, 5);
+    const topByRings = [...allPlayers].sort((a, b) => b.rings - a.rings).slice(0, 5);
+    const topByMVP = [...allPlayers].filter((p) => p.mvp > 0).sort((a, b) => b.mvp - a.mvp).slice(0, 5);
 
-    // OPOY candidates (offense positions)
-    const offensePlayers = [
-      ...careerData.quarterbacks.filter(p => p.status === 'Active'),
-      ...careerData.runningbacks.filter(p => p.status === 'Active'),
-      ...careerData.widereceivers.filter(p => p.status === 'Active'),
-      ...careerData.tightends.filter(p => p.status === 'Active'),
-    ];
-    const opoyCandidates = [...offensePlayers]
-      .sort((a, b) => b.dominance - a.dominance)
-      .slice(0, 5)
-      .map((p, i) => ({
-        name: p.name.split(' ').pop() || p.name,
-        fullName: p.name,
-        value: Math.round((5 - i) * 18),
-        dominance: p.dominance,
-        position: p.position,
-      }));
+    // Season stories (if season data exists)
+    let seasonStories: { headline: string; body: string; player?: Player; tier: 'legendary' | 'breaking' | 'notable' }[] = [];
 
-    // DPOY candidates
-    const defensePlayers = [
-      ...careerData.linebackers.filter(p => p.status === 'Active'),
-      ...careerData.defensivebacks.filter(p => p.status === 'Active'),
-      ...careerData.defensiveline.filter(p => p.status === 'Active'),
-    ];
-    const dpoyCandidates = [...defensePlayers]
-      .sort((a, b) => b.dominance - a.dominance)
-      .slice(0, 5)
-      .map((p, i) => ({
-        name: p.name.split(' ').pop() || p.name,
-        fullName: p.name,
-        value: Math.round((5 - i) * 18),
-        dominance: p.dominance,
-        position: p.position,
-      }));
+    if (seasonData) {
+      const allSeasonPlayers: Player[] = [
+        ...seasonData.quarterbacks,
+        ...seasonData.runningbacks,
+        ...seasonData.widereceivers,
+        ...seasonData.tightends,
+        ...seasonData.offensiveline,
+        ...seasonData.linebackers,
+        ...seasonData.defensivebacks,
+        ...seasonData.defensiveline,
+      ];
 
-    // All-time greats by legacy
-    const allTimeGreats = [...allPlayers]
-      .sort((a, b) => b.careerLegacy - a.careerLegacy)
-      .slice(0, 10);
+      // Find standout season performers
+      const qbStandout = seasonData.quarterbacks.reduce((a, b) => (a.passYds > b.passYds ? a : b), seasonData.quarterbacks[0]);
+      const rbStandout = seasonData.runningbacks.reduce((a, b) => (a.rushYds > b.rushYds ? a : b), seasonData.runningbacks[0]);
+      const wrStandout = seasonData.widereceivers.reduce((a, b) => (a.recYds > b.recYds ? a : b), seasonData.widereceivers[0]);
 
-    // Position distribution
-    const positionDist = [
-      { name: 'QB', value: careerData.quarterbacks.length, fill: 'hsl(190, 100%, 50%)' },
-      { name: 'RB', value: careerData.runningbacks.length, fill: 'hsl(270, 80%, 60%)' },
-      { name: 'WR', value: careerData.widereceivers.length, fill: 'hsl(45, 100%, 55%)' },
-      { name: 'TE', value: careerData.tightends.length, fill: 'hsl(150, 70%, 45%)' },
-      { name: 'OL', value: careerData.offensiveline.length, fill: 'hsl(200, 70%, 50%)' },
-      { name: 'LB', value: careerData.linebackers.length, fill: 'hsl(0, 70%, 55%)' },
-      { name: 'DB', value: careerData.defensivebacks.length, fill: 'hsl(30, 80%, 50%)' },
-      { name: 'DL', value: careerData.defensiveline.length, fill: 'hsl(280, 60%, 50%)' },
-    ];
+      if (qbStandout && qbStandout.passYds > 0) {
+        const isLegendary = qbStandout.passYds >= 4500;
+        const careerQB = careerData.quarterbacks.find((q) => q.name === qbStandout.name);
+        seasonStories.push({
+          headline: isLegendary
+            ? `${qbStandout.name.split(' ').pop()} Posts Historic Season`
+            : `${qbStandout.name.split(' ').pop()} Leads League in Passing`,
+          body: `${qbStandout.name} threw for ${qbStandout.passYds.toLocaleString()} yards and ${qbStandout.passTD} touchdowns this season${careerQB ? `, bringing their career total to ${careerQB.passYds.toLocaleString()} yards` : ''}.`,
+          player: careerQB || qbStandout,
+          tier: isLegendary ? 'legendary' : 'breaking',
+        });
+      }
 
-    // Career milestones
-    const hofPlayers = allPlayers.filter(p => p.careerLegacy >= 5000);
-    const legendaryPlayers = allPlayers.filter(p => p.careerLegacy >= 8000);
-    const championshipWinners = allPlayers.filter(p => p.rings > 0);
-    const mvpWinners = allPlayers.filter(p => p.mvp > 0);
+      if (rbStandout && rbStandout.rushYds > 0) {
+        const isLegendary = rbStandout.rushYds >= 1500;
+        const careerRB = careerData.runningbacks.find((r) => r.name === rbStandout.name);
+        seasonStories.push({
+          headline: isLegendary
+            ? `${rbStandout.name.split(' ').pop()} Dominates on the Ground`
+            : `${rbStandout.name.split(' ').pop()} Paces Rushing Attack`,
+          body: `${rbStandout.name} rushed for ${rbStandout.rushYds.toLocaleString()} yards with ${rbStandout.rushTD} touchdowns${careerRB ? `. Career rushing yards now sit at ${careerRB.rushYds.toLocaleString()}` : ''}.`,
+          player: careerRB || rbStandout,
+          tier: isLegendary ? 'legendary' : 'notable',
+        });
+      }
 
-    // Top performers by TPG (efficiency)
-    const topTPG = [...activePlayers]
-      .sort((a, b) => b.tpg - a.tpg)
-      .slice(0, 5);
+      if (wrStandout && wrStandout.recYds > 0) {
+        const isLegendary = wrStandout.recYds >= 1400;
+        const careerWR = careerData.widereceivers.find((w) => w.name === wrStandout.name);
+        seasonStories.push({
+          headline: isLegendary
+            ? `${wrStandout.name.split(' ').pop()} Has Career Year`
+            : `${wrStandout.name.split(' ').pop()} Leads Receivers`,
+          body: `${wrStandout.name} hauled in ${wrStandout.receptions} catches for ${wrStandout.recYds.toLocaleString()} yards and ${wrStandout.recTD} scores${careerWR ? `. Now has ${careerWR.recYds.toLocaleString()} career receiving yards` : ''}.`,
+          player: careerWR || wrStandout,
+          tier: isLegendary ? 'legendary' : 'notable',
+        });
+      }
+
+      // Championship winner story
+      const newChamps = allSeasonPlayers.filter((p) => p.rings > 0);
+      if (newChamps.length > 0) {
+        seasonStories.unshift({
+          headline: 'Championship Glory',
+          body: `${newChamps.length} player${newChamps.length > 1 ? 's' : ''} added a ring to ${newChamps.length > 1 ? 'their collections' : 'their collection'} this season: ${newChamps.map((p) => p.name).join(', ')}.`,
+          tier: 'legendary',
+        });
+      }
+
+      // MVP winner
+      const newMVPs = allSeasonPlayers.filter((p) => p.mvp > 0);
+      if (newMVPs.length > 0) {
+        const mvp = newMVPs[0];
+        const careerMVP = allPlayers.find((p) => p.name === mvp.name);
+        seasonStories.unshift({
+          headline: `${mvp.name.split(' ').pop()} Wins MVP`,
+          body: `${mvp.name} captured the league's highest individual honor${careerMVP && careerMVP.mvp > 1 ? `, their ${careerMVP.mvp}${careerMVP.mvp === 2 ? 'nd' : careerMVP.mvp === 3 ? 'rd' : 'th'} career MVP award` : ''}.`,
+          player: careerMVP || mvp,
+          tier: 'legendary',
+        });
+      }
+    }
 
     return {
-      mvpCandidates,
-      opoyCandidates,
-      dpoyCandidates,
-      allTimeGreats,
-      positionDist,
       totalPlayers: allPlayers.length,
       activePlayers: activePlayers.length,
-      retiredPlayers: retiredPlayers.length,
-      hofPlayers: hofPlayers.length,
-      legendaryPlayers: legendaryPlayers.length,
-      championshipWinners: championshipWinners.length,
-      mvpWinners: mvpWinners.length,
-      topTPG,
+      hofCount: hofPlayers.length,
+      legendaryCount: legendaryPlayers.length,
+      topByLegacy,
+      topByTPG,
+      topByRings,
+      topByMVP,
+      seasonStories,
     };
-  }, [careerData]);
+  }, [careerData, seasonData]);
 
-  if (!careerData) {
+  if (!careerData || !commentary) {
     return (
       <div className="container mx-auto px-6 py-12">
         <div className="max-w-2xl mx-auto text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-chart-4/10 mb-6">
             <Newspaper className="w-10 h-10 text-chart-4" />
           </div>
-          <h2 className="font-display text-4xl font-bold mb-4 text-chart-4">
-            LEAGUE COMMENTARY
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            Upload your league data in the Career tab to unlock 
-            commentary and advanced analytics.
-          </p>
+          <h2 className="font-display text-4xl font-bold mb-4 text-chart-4">LEAGUE REPORT</h2>
+          <p className="text-muted-foreground text-lg">Upload your league data to see commentary and analysis.</p>
         </div>
       </div>
     );
   }
 
-  const COLORS = [
-    'hsl(190, 100%, 50%)',
-    'hsl(270, 80%, 60%)',
-    'hsl(150, 70%, 45%)',
-    'hsl(45, 100%, 55%)',
-    'hsl(0, 70%, 55%)',
-  ];
-
   return (
     <div className="container mx-auto px-6 py-8 space-y-8">
       {/* Header */}
       <div className="glass-card-glow p-8">
-        <div className="flex items-center gap-4 mb-4">
-          <Newspaper className="w-8 h-8 text-chart-4" />
+        <div className="flex items-center gap-4 mb-6">
+          <Newspaper className="w-10 h-10 text-chart-4" />
           <div>
-            <h2 className="font-display text-3xl font-bold tracking-wide">LEAGUE REPORT</h2>
-            <p className="text-muted-foreground">Season {currentSeason} Analysis</p>
+            <h2 className="font-display text-4xl font-bold tracking-wide">LEAGUE REPORT</h2>
+            <p className="text-muted-foreground">Season {currentSeason} • {commentary.totalPlayers} Players • {commentary.hofCount} Hall of Famers</p>
           </div>
         </div>
-        <div className="prose prose-invert max-w-none">
-          <p className="text-lg leading-relaxed">
-            As we wrap up <span className="text-primary font-semibold">{currentSeason}</span>, the league 
-            continues to showcase incredible talent across all positions. With{' '}
-            <span className="text-metric-elite font-semibold">{analysis?.activePlayers}</span> active 
-            players competing at the highest level, the competition for postseason awards has 
-            never been fiercer. <span className="text-muted-foreground">{analysis?.retiredPlayers} legends have hung up their cleats.</span>
-          </p>
-        </div>
-        
+
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border/30">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border/30">
           <div className="text-center">
-            <p className="font-display text-3xl font-bold text-primary">{analysis?.hofPlayers}</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Hall of Famers</p>
+            <p className="font-display text-3xl font-bold text-primary">{commentary.activePlayers}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Active Players</p>
           </div>
           <div className="text-center">
-            <p className="font-display text-3xl font-bold text-chart-4">{analysis?.legendaryPlayers}</p>
+            <p className="font-display text-3xl font-bold text-chart-4">{commentary.legendaryCount}</p>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Legendary Status</p>
           </div>
           <div className="text-center">
-            <p className="font-display text-3xl font-bold text-accent">{analysis?.championshipWinners}</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Ring Winners</p>
+            <p className="font-display text-3xl font-bold text-accent">{commentary.topByRings[0]?.rings || 0}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Most Rings</p>
           </div>
           <div className="text-center">
-            <p className="font-display text-3xl font-bold text-metric-elite">{analysis?.mvpWinners}</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">MVP Winners</p>
+            <p className="font-display text-3xl font-bold text-metric-elite">{commentary.topByTPG[0]?.tpg.toFixed(2) || '0'}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Top TPG</p>
           </div>
         </div>
       </div>
 
-      {/* Award Races Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* MVP Race */}
+      {/* Season Stories */}
+      {commentary.seasonStories.length > 0 && (
         <div className="glass-card p-6">
-          <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-primary" />
-            MVP RACE
-          </h3>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analysis?.mvpCandidates} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 25%)" />
-                <XAxis type="number" domain={[0, 100]} stroke="hsl(220, 15%, 55%)" />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  width={70}
-                  stroke="hsl(220, 15%, 55%)"
-                  tick={{ fontSize: 11 }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(230, 25%, 12%)', 
-                    border: '1px solid hsl(220, 20%, 25%)',
-                    borderRadius: '8px',
-                  }}
-                  formatter={(value: number) => [`${value}%`, 'Odds']}
-                  labelFormatter={(label) => analysis?.mvpCandidates.find(c => c.name === label)?.fullName}
-                />
-                <Bar dataKey="value" fill="hsl(190, 100%, 50%)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="flex items-center gap-2 border-b border-border/30 pb-3 mb-6">
+            <AlertCircle className="w-5 h-5 text-chart-4" />
+            <h3 className="font-display text-xl font-bold text-chart-4">SEASON {currentSeason} HEADLINES</h3>
           </div>
-        </div>
-
-        {/* OPOY Race */}
-        <div className="glass-card p-6">
-          <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
-            <Award className="w-5 h-5 text-chart-4" />
-            OPOY RACE
-          </h3>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analysis?.opoyCandidates} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 25%)" />
-                <XAxis type="number" domain={[0, 100]} stroke="hsl(220, 15%, 55%)" />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  width={70}
-                  stroke="hsl(220, 15%, 55%)"
-                  tick={{ fontSize: 11 }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(230, 25%, 12%)', 
-                    border: '1px solid hsl(220, 20%, 25%)',
-                    borderRadius: '8px',
-                  }}
-                  formatter={(value: number) => [`${value}%`, 'Odds']}
-                  labelFormatter={(label) => analysis?.opoyCandidates.find(c => c.name === label)?.fullName}
-                />
-                <Bar dataKey="value" fill="hsl(45, 100%, 55%)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* DPOY Race */}
-        <div className="glass-card p-6">
-          <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
-            <Award className="w-5 h-5 text-accent" />
-            DPOY RACE
-          </h3>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analysis?.dpoyCandidates} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 25%)" />
-                <XAxis type="number" domain={[0, 100]} stroke="hsl(220, 15%, 55%)" />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  width={70}
-                  stroke="hsl(220, 15%, 55%)"
-                  tick={{ fontSize: 11 }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(230, 25%, 12%)', 
-                    border: '1px solid hsl(220, 20%, 25%)',
-                    borderRadius: '8px',
-                  }}
-                  formatter={(value: number) => [`${value}%`, 'Odds']}
-                  labelFormatter={(label) => analysis?.dpoyCandidates.find(c => c.name === label)?.fullName}
-                />
-                <Bar dataKey="value" fill="hsl(270, 80%, 60%)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Second Row */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Position Distribution */}
-        <div className="glass-card p-6">
-          <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
-            <Users className="w-5 h-5 text-chart-4" />
-            ROSTER BREAKDOWN
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={analysis?.positionDist}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  innerRadius={50}
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
-                  labelLine={false}
-                >
-                  {analysis?.positionDist.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(230, 25%, 12%)', 
-                    border: '1px solid hsl(220, 20%, 25%)',
-                    borderRadius: '8px',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Top Efficiency */}
-        <div className="glass-card p-6">
-          <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-metric-elite" />
-            TOP EFFICIENCY (TPG)
-          </h3>
-          <div className="space-y-3">
-            {analysis?.topTPG.map((player, i) => (
-              <div 
-                key={player.name}
-                className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30"
-              >
-                <span className="font-display font-bold text-2xl text-muted-foreground/50 w-8">
-                  {i + 1}
-                </span>
-                <div className="flex-1">
-                  <p className="font-semibold">{player.name}</p>
-                  <p className="text-xs text-muted-foreground uppercase">{player.position}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono font-bold text-xl metric-elite">
-                    {player.tpg.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">TPG</p>
-                </div>
-              </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            {commentary.seasonStories.map((story, i) => (
+              <StoryCard key={i} story={story} />
             ))}
           </div>
         </div>
+      )}
+
+      {/* Career Analysis */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* All-Time Greats */}
+        <div className="glass-card p-6">
+          <div className="flex items-center gap-2 border-b border-border/30 pb-3 mb-4">
+            <Crown className="w-5 h-5 text-chart-4" />
+            <h3 className="font-display text-xl font-bold text-chart-4">ALL-TIME LEGACY LEADERS</h3>
+          </div>
+          <div className="space-y-3">
+            {commentary.topByLegacy.map((player, i) => (
+              <PlayerRow key={player.name} player={player} rank={i + 1} stat={player.careerLegacy} statLabel="Legacy" />
+            ))}
+          </div>
+        </div>
+
+        {/* Most Efficient (TPG) */}
+        <div className="glass-card p-6">
+          <div className="flex items-center gap-2 border-b border-border/30 pb-3 mb-4">
+            <TrendingUp className="w-5 h-5 text-metric-elite" />
+            <h3 className="font-display text-xl font-bold text-metric-elite">EFFICIENCY LEADERS (TPG)</h3>
+          </div>
+          <div className="space-y-3">
+            {commentary.topByTPG.map((player, i) => (
+              <PlayerRow key={player.name} player={player} rank={i + 1} stat={player.tpg} statLabel="TPG" decimals={2} />
+            ))}
+          </div>
+        </div>
+
+        {/* Championship Winners */}
+        <div className="glass-card p-6">
+          <div className="flex items-center gap-2 border-b border-border/30 pb-3 mb-4">
+            <Trophy className="w-5 h-5 text-accent" />
+            <h3 className="font-display text-xl font-bold text-accent">MOST CHAMPIONSHIPS</h3>
+          </div>
+          <div className="space-y-3">
+            {commentary.topByRings.map((player, i) => (
+              <PlayerRow key={player.name} player={player} rank={i + 1} stat={player.rings} statLabel="Rings" />
+            ))}
+          </div>
+        </div>
+
+        {/* MVP Winners */}
+        <div className="glass-card p-6">
+          <div className="flex items-center gap-2 border-b border-border/30 pb-3 mb-4">
+            <Star className="w-5 h-5 text-primary" />
+            <h3 className="font-display text-xl font-bold text-primary">MVP AWARD LEADERS</h3>
+          </div>
+          <div className="space-y-3">
+            {commentary.topByMVP.length > 0 ? (
+              commentary.topByMVP.map((player, i) => (
+                <PlayerRow key={player.name} player={player} rank={i + 1} stat={player.mvp} statLabel="MVPs" />
+              ))
+            ) : (
+              <p className="text-muted-foreground text-sm">No MVP winners yet.</p>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Career & Season Analysis */}
+      {/* League Analysis */}
       <div className="glass-card p-8">
-        <h3 className="font-display font-bold text-2xl mb-6 border-b border-border/30 pb-4 flex items-center gap-2">
-          <Calendar className="w-6 h-6 text-primary" />
-          SEASON {currentSeason} STORYLINES
-        </h3>
-        <div className="grid md:grid-cols-2 gap-8">
+        <h3 className="font-display font-bold text-2xl mb-6 border-b border-border/30 pb-4">STATE OF THE LEAGUE</h3>
+        <div className="grid md:grid-cols-2 gap-8 text-muted-foreground leading-relaxed">
           <div>
-            <h4 className="font-bold text-primary mb-3 text-lg">Championship Contenders</h4>
-            <p className="text-muted-foreground leading-relaxed">
-              With players like <span className="text-foreground font-semibold">
-                {analysis?.allTimeGreats[0]?.name}
-              </span> leading the charge, the race for the championship is heating up. 
-              Their <span className="metric-elite font-mono font-semibold">
-                {analysis?.allTimeGreats[0]?.trueTalent.toFixed(0)}
-              </span> True Talent rating puts them among the elite performers. 
-              Currently holding <span className="text-chart-4 font-semibold">{analysis?.allTimeGreats[0]?.rings} rings</span>.
+            <h4 className="font-bold text-primary mb-2">Dynasty in the Making?</h4>
+            <p>
+              <span className="text-foreground font-semibold">{commentary.topByRings[0]?.name}</span> leads the league with{' '}
+              <span className="text-chart-4 font-semibold">{commentary.topByRings[0]?.rings} championships</span>, cementing their
+              legacy as one of the greatest winners in league history.
+              {commentary.topByRings[0]?.status === 'Active' && ' Still active and hunting for more.'}
             </p>
           </div>
           <div>
-            <h4 className="font-bold text-accent mb-3 text-lg">Rising Stars</h4>
-            <p className="text-muted-foreground leading-relaxed">
-              The league is witnessing the emergence of new talent. 
-              <span className="text-foreground font-semibold"> {analysis?.topTPG[0]?.name}</span> leads 
-              all active players with a stunning <span className="metric-elite font-mono font-semibold">
-                {analysis?.topTPG[0]?.tpg.toFixed(2)}
-              </span> TPG, showcasing elite efficiency from the {analysis?.topTPG[0]?.position} position.
+            <h4 className="font-bold text-metric-elite mb-2">Peak Performance</h4>
+            <p>
+              With a <span className="text-metric-elite font-semibold">{commentary.topByTPG[0]?.tpg.toFixed(2)} TPG</span>,{' '}
+              <span className="text-foreground font-semibold">{commentary.topByTPG[0]?.name}</span> ({commentary.topByTPG[0]?.position})
+              is producing at an elite rate. Only <span className="text-chart-4 font-semibold">{commentary.legendaryCount}</span> players
+              have achieved legendary status (Legacy ≥8000).
             </p>
           </div>
           <div>
-            <h4 className="font-bold text-chart-4 mb-3 text-lg">Career Milestones</h4>
-            <p className="text-muted-foreground leading-relaxed">
-              <span className="text-chart-4 font-semibold">{analysis?.hofPlayers} players</span> have 
-              achieved Hall of Fame status (Legacy ≥5000), with <span className="text-foreground font-semibold">
-                {analysis?.legendaryPlayers}
-              </span> reaching Legendary tier (≥8000). The all-time leader{' '}
-              <span className="text-foreground font-semibold">{analysis?.allTimeGreats[0]?.name}</span> holds 
-              a <span className="metric-elite font-mono font-semibold">
-                {analysis?.allTimeGreats[0]?.careerLegacy.toFixed(0)}
-              </span> Career Legacy.
+            <h4 className="font-bold text-accent mb-2">Hall of Fame Watch</h4>
+            <p>
+              <span className="text-accent font-semibold">{commentary.hofCount} players</span> have crossed the Hall of Fame threshold
+              (Legacy ≥5000). The all-time leader <span className="text-foreground font-semibold">{commentary.topByLegacy[0]?.name}</span> holds
+              a commanding <span className="text-chart-4 font-semibold">{commentary.topByLegacy[0]?.careerLegacy.toFixed(0)}</span> Career Legacy.
             </p>
           </div>
           <div>
-            <h4 className="font-bold text-metric-elite mb-3 text-lg">Award Favorites</h4>
-            <p className="text-muted-foreground leading-relaxed">
-              The MVP race is led by <span className="text-foreground font-semibold">
-                {analysis?.mvpCandidates[0]?.fullName}
-              </span> ({analysis?.mvpCandidates[0]?.position}). 
-              For OPOY, watch <span className="text-foreground font-semibold">
-                {analysis?.opoyCandidates[0]?.fullName}
-              </span>, while <span className="text-foreground font-semibold">
-                {analysis?.dpoyCandidates[0]?.fullName}
-              </span> leads DPOY voting.
+            <h4 className="font-bold text-chart-4 mb-2">Looking Ahead</h4>
+            <p>
+              With <span className="text-primary font-semibold">{commentary.activePlayers} active players</span> still competing,
+              the race for postseason awards and statistical milestones continues. The next generation is ready to make their mark.
             </p>
           </div>
         </div>
       </div>
+    </div>
+  );
+};
 
-      {/* All-Time Greats */}
-      <div className="glass-card p-6">
-        <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
-          <Star className="w-5 h-5 text-chart-4" />
-          ALL-TIME LEGACY LEADERS
-        </h3>
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {analysis?.allTimeGreats.slice(0, 5).map((player, i) => (
-            <div 
-              key={player.name}
-              className="glass-card p-4 text-center"
+const StoryCard = ({ story }: { story: { headline: string; body: string; player?: Player; tier: string } }) => {
+  const colors = {
+    legendary: { border: 'border-chart-4', text: 'text-chart-4', bg: 'bg-chart-4/10' },
+    breaking: { border: 'border-primary', text: 'text-primary', bg: 'bg-primary/10' },
+    notable: { border: 'border-muted-foreground', text: 'text-muted-foreground', bg: 'bg-muted/10' },
+  };
+  const style = colors[story.tier as keyof typeof colors] || colors.notable;
+  const teamColors = story.player ? getTeamColors(story.player.team) : null;
+
+  return (
+    <div
+      className={`rounded-xl p-4 ${style.bg} border ${style.border}`}
+      style={teamColors ? { borderLeftColor: `hsl(${teamColors.primary})`, borderLeftWidth: '3px' } : undefined}
+    >
+      <h4 className={`font-bold ${style.text} mb-2`}>{story.headline}</h4>
+      <p className="text-sm text-muted-foreground">{story.body}</p>
+      {story.player && (
+        <div className="flex items-center gap-2 mt-3">
+          <PositionBadge position={story.player.position} className="text-xs" />
+          {story.player.team && (
+            <span
+              className="text-xs px-2 py-0.5 rounded font-medium"
+              style={teamColors ? { backgroundColor: `hsl(${teamColors.primary} / 0.2)`, color: `hsl(${teamColors.primary})` } : undefined}
             >
-              <span className="font-display font-bold text-4xl text-muted-foreground/30">
-                #{i + 1}
-              </span>
-              <p className="font-semibold mt-2">{player.name}</p>
-              <p className="text-xs text-muted-foreground uppercase mb-2">{player.position}</p>
-              <p className="font-mono font-bold text-xl metric-elite">
-                {player.careerLegacy.toFixed(0)}
-              </p>
-              <p className="text-xs text-muted-foreground">Career Legacy</p>
-            </div>
-          ))}
+              {story.player.team}
+            </span>
+          )}
         </div>
+      )}
+    </div>
+  );
+};
+
+const PlayerRow = ({ player, rank, stat, statLabel, decimals = 0 }: { player: Player; rank: number; stat: number; statLabel: string; decimals?: number }) => {
+  const teamColors = getTeamColors(player.team);
+
+  return (
+    <div
+      className="flex items-center gap-4 p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors"
+      style={teamColors ? { borderLeft: `3px solid hsl(${teamColors.primary})` } : undefined}
+    >
+      <span className="font-display font-bold text-2xl text-muted-foreground/50 w-8">{rank}</span>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold truncate">{player.name}</p>
+        <div className="flex items-center gap-2">
+          <PositionBadge position={player.position} className="text-xs" />
+          {player.team && <span className="text-xs text-muted-foreground">{player.team}</span>}
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="font-mono font-bold text-xl text-primary">{decimals > 0 ? stat.toFixed(decimals) : stat.toLocaleString()}</p>
+        <p className="text-xs text-muted-foreground">{statLabel}</p>
       </div>
     </div>
   );

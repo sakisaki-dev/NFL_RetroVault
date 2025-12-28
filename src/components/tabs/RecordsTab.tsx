@@ -1,114 +1,150 @@
 import { useMemo } from 'react';
 import { useLeague } from '@/context/LeagueContext';
-import { Trophy, Target, Zap, Shield } from 'lucide-react';
+import { Trophy, Crown } from 'lucide-react';
 import type { Player, QBPlayer, RBPlayer, WRPlayer, TEPlayer, LBPlayer, DBPlayer, DLPlayer } from '@/types/player';
 import PositionBadge from '../PositionBadge';
+import { getTeamColors } from '@/utils/teamColors';
 
-interface Record {
-  category: string;
+interface RecordEntry {
   stat: string;
   value: number;
   playerName: string;
+  team?: string;
   position: string;
-  icon?: string;
 }
+
+const RecordRow = ({ record, rank }: { record: RecordEntry; rank: number }) => {
+  const teamColors = getTeamColors(record.team);
+  
+  return (
+    <div 
+      className="flex items-center gap-4 p-4 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors"
+      style={teamColors ? { borderLeft: `3px solid hsl(${teamColors.primary})` } : undefined}
+    >
+      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary font-display font-bold text-lg">
+        {rank}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-foreground">{record.playerName}</span>
+          {record.team && (
+            <span 
+              className="text-xs px-2 py-0.5 rounded font-medium"
+              style={teamColors ? {
+                backgroundColor: `hsl(${teamColors.primary} / 0.2)`,
+                color: `hsl(${teamColors.primary})`,
+              } : { color: 'hsl(var(--muted-foreground))' }}
+            >
+              {record.team}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5">{record.stat}</p>
+      </div>
+      <div className="text-right">
+        <p className="font-mono text-xl font-bold text-primary">
+          {record.value.toLocaleString()}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const RecordsTab = () => {
   const { careerData } = useLeague();
 
   const records = useMemo(() => {
-    if (!careerData) return { offense: [], defense: [], metrics: [] };
+    if (!careerData) return null;
 
-    const offense: Record[] = [];
-    const defense: Record[] = [];
-    const metrics: Record[] = [];
+    // Helper to find max
+    const findMax = <T extends Player>(
+      players: T[],
+      getValue: (p: T) => number,
+      stat: string,
+    ): RecordEntry | null => {
+      if (players.length === 0) return null;
+      const max = players.reduce((a, b) => (getValue(a) > getValue(b) ? a : b));
+      return {
+        stat,
+        value: getValue(max),
+        playerName: max.name,
+        team: max.team,
+        position: max.position,
+      };
+    };
 
     // QB Records
+    const qbRecords: RecordEntry[] = [];
     if (careerData.quarterbacks.length > 0) {
       const qbs = careerData.quarterbacks;
-      const maxPassYds = qbs.reduce((max, p) => p.passYds > max.passYds ? p : max);
-      const maxPassTD = qbs.reduce((max, p) => p.passTD > max.passTD ? p : max);
-      const maxRushYdsQB = qbs.reduce((max, p) => p.rushYds > max.rushYds ? p : max);
-      const maxRushTDQB = qbs.reduce((max, p) => p.rushTD > max.rushTD ? p : max);
-      const maxGamesQB = qbs.reduce((max, p) => p.games > max.games ? p : max);
-
-      offense.push(
-        { category: 'QB', stat: 'Career Pass Yards', value: maxPassYds.passYds, playerName: maxPassYds.name, position: 'QB' },
-        { category: 'QB', stat: 'Career Pass TDs', value: maxPassTD.passTD, playerName: maxPassTD.name, position: 'QB' },
-        { category: 'QB', stat: 'QB Rush Yards', value: maxRushYdsQB.rushYds, playerName: maxRushYdsQB.name, position: 'QB' },
-        { category: 'QB', stat: 'QB Rush TDs', value: maxRushTDQB.rushTD, playerName: maxRushTDQB.name, position: 'QB' },
-        { category: 'QB', stat: 'Games (QB)', value: maxGamesQB.games, playerName: maxGamesQB.name, position: 'QB' },
-      );
+      [
+        findMax(qbs, (p) => p.passYds, 'Career Passing Yards'),
+        findMax(qbs, (p) => p.passTD, 'Career Passing Touchdowns'),
+        findMax(qbs, (p) => p.completions, 'Career Completions'),
+        findMax(qbs, (p) => p.games, 'Games Started (QB)'),
+        findMax(qbs, (p) => p.rushYds, 'QB Career Rush Yards'),
+        findMax(qbs, (p) => p.rushTD, 'QB Career Rush TDs'),
+      ].forEach((r) => r && qbRecords.push(r));
     }
 
     // RB Records
+    const rbRecords: RecordEntry[] = [];
     if (careerData.runningbacks.length > 0) {
       const rbs = careerData.runningbacks;
-      const maxRushYds = rbs.reduce((max, p) => p.rushYds > max.rushYds ? p : max);
-      const maxRushTD = rbs.reduce((max, p) => p.rushTD > max.rushTD ? p : max);
-      const maxRecYdsRB = rbs.reduce((max, p) => p.recYds > max.recYds ? p : max);
-      const maxRecTDRB = rbs.reduce((max, p) => p.recTD > max.recTD ? p : max);
-
-      offense.push(
-        { category: 'RB', stat: 'Career Rush Yards', value: maxRushYds.rushYds, playerName: maxRushYds.name, position: 'RB' },
-        { category: 'RB', stat: 'Career Rush TDs', value: maxRushTD.rushTD, playerName: maxRushTD.name, position: 'RB' },
-        { category: 'RB', stat: 'RB Rec Yards', value: maxRecYdsRB.recYds, playerName: maxRecYdsRB.name, position: 'RB' },
-        { category: 'RB', stat: 'RB Rec TDs', value: maxRecTDRB.recTD, playerName: maxRecTDRB.name, position: 'RB' },
-      );
+      [
+        findMax(rbs, (p) => p.rushYds, 'Career Rushing Yards'),
+        findMax(rbs, (p) => p.rushTD, 'Career Rushing Touchdowns'),
+        findMax(rbs, (p) => p.rushAtt, 'Career Rush Attempts'),
+        findMax(rbs, (p) => p.recYds, 'RB Career Receiving Yards'),
+        findMax(rbs, (p) => p.recTD, 'RB Career Receiving TDs'),
+        findMax(rbs, (p) => p.games, 'Games Started (RB)'),
+      ].forEach((r) => r && rbRecords.push(r));
     }
 
     // WR Records
+    const wrRecords: RecordEntry[] = [];
     if (careerData.widereceivers.length > 0) {
       const wrs = careerData.widereceivers;
-      const maxRec = wrs.reduce((max, p) => p.receptions > max.receptions ? p : max);
-      const maxRecYds = wrs.reduce((max, p) => p.recYds > max.recYds ? p : max);
-      const maxRecTD = wrs.reduce((max, p) => p.recTD > max.recTD ? p : max);
-      const maxLongest = wrs.reduce((max, p) => p.longest > max.longest ? p : max);
-
-      offense.push(
-        { category: 'WR', stat: 'Career Receptions', value: maxRec.receptions, playerName: maxRec.name, position: 'WR' },
-        { category: 'WR', stat: 'Career Rec Yards', value: maxRecYds.recYds, playerName: maxRecYds.name, position: 'WR' },
-        { category: 'WR', stat: 'Career Rec TDs', value: maxRecTD.recTD, playerName: maxRecTD.name, position: 'WR' },
-        { category: 'WR', stat: 'Longest Reception', value: maxLongest.longest, playerName: maxLongest.name, position: 'WR' },
-      );
+      [
+        findMax(wrs, (p) => p.recYds, 'Career Receiving Yards'),
+        findMax(wrs, (p) => p.receptions, 'Career Receptions'),
+        findMax(wrs, (p) => p.recTD, 'Career Receiving TDs'),
+        findMax(wrs, (p) => p.longest, 'Longest Reception'),
+        findMax(wrs, (p) => p.games, 'Games Started (WR)'),
+      ].forEach((r) => r && wrRecords.push(r));
     }
 
     // TE Records
+    const teRecords: RecordEntry[] = [];
     if (careerData.tightends.length > 0) {
       const tes = careerData.tightends;
-      const maxRecTE = tes.reduce((max, p) => p.receptions > max.receptions ? p : max);
-      const maxRecYdsTE = tes.reduce((max, p) => p.recYds > max.recYds ? p : max);
-      const maxRecTDTE = tes.reduce((max, p) => p.recTD > max.recTD ? p : max);
-
-      offense.push(
-        { category: 'TE', stat: 'TE Receptions', value: maxRecTE.receptions, playerName: maxRecTE.name, position: 'TE' },
-        { category: 'TE', stat: 'TE Rec Yards', value: maxRecYdsTE.recYds, playerName: maxRecYdsTE.name, position: 'TE' },
-        { category: 'TE', stat: 'TE Rec TDs', value: maxRecTDTE.recTD, playerName: maxRecTDTE.name, position: 'TE' },
-      );
+      [
+        findMax(tes, (p) => p.recYds, 'TE Career Receiving Yards'),
+        findMax(tes, (p) => p.receptions, 'TE Career Receptions'),
+        findMax(tes, (p) => p.recTD, 'TE Career Receiving TDs'),
+        findMax(tes, (p) => p.games, 'Games Started (TE)'),
+      ].forEach((r) => r && teRecords.push(r));
     }
 
-    // Defensive Records
-    const allDefense = [
+    // Defensive Records (combined)
+    const allDef = [
       ...careerData.linebackers,
       ...careerData.defensivebacks,
       ...careerData.defensiveline,
     ] as (LBPlayer | DBPlayer | DLPlayer)[];
 
-    if (allDefense.length > 0) {
-      const maxTackles = allDefense.reduce((max, p) => p.tackles > max.tackles ? p : max);
-      const maxInts = allDefense.reduce((max, p) => p.interceptions > max.interceptions ? p : max);
-      const maxSacks = allDefense.reduce((max, p) => p.sacks > max.sacks ? p : max);
-      const maxFF = allDefense.reduce((max, p) => p.forcedFumbles > max.forcedFumbles ? p : max);
-
-      defense.push(
-        { category: 'DEF', stat: 'Career Tackles', value: maxTackles.tackles, playerName: maxTackles.name, position: maxTackles.position },
-        { category: 'DEF', stat: 'Career Interceptions', value: maxInts.interceptions, playerName: maxInts.name, position: maxInts.position },
-        { category: 'DEF', stat: 'Career Sacks', value: maxSacks.sacks, playerName: maxSacks.name, position: maxSacks.position },
-        { category: 'DEF', stat: 'Career Forced Fumbles', value: maxFF.forcedFumbles, playerName: maxFF.name, position: maxFF.position },
-      );
+    const defRecords: RecordEntry[] = [];
+    if (allDef.length > 0) {
+      [
+        findMax(allDef, (p) => p.tackles, 'Career Tackles'),
+        findMax(allDef, (p) => p.interceptions, 'Career Interceptions (DEF)'),
+        findMax(allDef, (p) => p.sacks, 'Career Sacks'),
+        findMax(allDef, (p) => p.forcedFumbles, 'Career Forced Fumbles'),
+        findMax(allDef, (p) => p.games, 'Games Started (DEF)'),
+      ].forEach((r) => r && defRecords.push(r));
     }
 
-    // Metric Records (all positions)
+    // Accolades & Metrics
     const allPlayers: Player[] = [
       ...careerData.quarterbacks,
       ...careerData.runningbacks,
@@ -120,61 +156,47 @@ const RecordsTab = () => {
       ...careerData.defensiveline,
     ];
 
+    const accoladeRecords: RecordEntry[] = [];
     if (allPlayers.length > 0) {
-      const maxLegacy = allPlayers.reduce((max, p) => p.careerLegacy > max.careerLegacy ? p : max);
-      const maxTalent = allPlayers.reduce((max, p) => p.trueTalent > max.trueTalent ? p : max);
-      const maxDominance = allPlayers.reduce((max, p) => p.dominance > max.dominance ? p : max);
-      const maxTPG = allPlayers.reduce((max, p) => p.tpg > max.tpg ? p : max);
-      const maxRings = allPlayers.reduce((max, p) => p.rings > max.rings ? p : max);
-      const maxMVP = allPlayers.reduce((max, p) => p.mvp > max.mvp ? p : max);
-      const maxGames = allPlayers.reduce((max, p) => p.games > max.games ? p : max);
-
-      metrics.push(
-        { category: 'LEGACY', stat: 'Career Legacy', value: maxLegacy.careerLegacy, playerName: maxLegacy.name, position: maxLegacy.position },
-        { category: 'TALENT', stat: 'True Talent', value: maxTalent.trueTalent, playerName: maxTalent.name, position: maxTalent.position },
-        { category: 'DOM', stat: 'Dominance', value: maxDominance.dominance, playerName: maxDominance.name, position: maxDominance.position },
-        { category: 'TPG', stat: 'Talent Per Game', value: maxTPG.tpg, playerName: maxTPG.name, position: maxTPG.position },
-        { category: 'RINGS', stat: 'Championships', value: maxRings.rings, playerName: maxRings.name, position: maxRings.position },
-        { category: 'MVP', stat: 'MVP Awards', value: maxMVP.mvp, playerName: maxMVP.name, position: maxMVP.position },
-        { category: 'IRON', stat: 'Games Played', value: maxGames.games, playerName: maxGames.name, position: maxGames.position },
-      );
+      [
+        findMax(allPlayers, (p) => p.rings, 'Career Championships'),
+        findMax(allPlayers, (p) => p.mvp, 'Career MVP Awards'),
+        findMax(allPlayers, (p) => p.sbmvp, 'Super Bowl MVP Awards'),
+        findMax(allPlayers, (p) => p.games, 'All-Time Games Played'),
+        findMax(allPlayers, (p) => p.careerLegacy, 'Highest Career Legacy'),
+        findMax(allPlayers, (p) => p.trueTalent, 'Highest True Talent'),
+        findMax(allPlayers, (p) => p.dominance, 'Highest Dominance'),
+        findMax(allPlayers, (p) => p.tpg, 'Highest TPG (Talent Per Game)'),
+      ].forEach((r) => r && accoladeRecords.push(r));
     }
 
-    return { offense, defense, metrics };
+    return { qbRecords, rbRecords, wrRecords, teRecords, defRecords, accoladeRecords };
   }, [careerData]);
 
-  if (!careerData) {
+  if (!careerData || !records) {
     return (
       <div className="container mx-auto px-6 py-12">
         <div className="max-w-2xl mx-auto text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6">
             <Trophy className="w-10 h-10 text-primary" />
           </div>
-          <h2 className="font-display text-4xl font-bold mb-4 text-primary">
-            LEAGUE RECORDS
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            Upload your league data to view all-time records.
-          </p>
+          <h2 className="font-display text-4xl font-bold mb-4 text-primary">ALL-TIME RECORDS</h2>
+          <p className="text-muted-foreground text-lg">Upload your league data to view all-time records.</p>
         </div>
       </div>
     );
   }
 
-  const RecordCard = ({ record, index }: { record: Record; index: number }) => (
-    <div className="glass-card p-4 flex items-center gap-4 hover:bg-secondary/30 transition-colors">
-      <div className="text-3xl font-display font-bold text-muted-foreground/40 w-10">
-        {index + 1}
+  const Section = ({ title, records, color }: { title: string; records: RecordEntry[]; color: string }) => (
+    <div className="glass-card p-6 space-y-4">
+      <div className="flex items-center gap-2 border-b border-border/30 pb-3">
+        <Crown className="w-5 h-5" style={{ color }} />
+        <h3 className="font-display text-xl font-bold tracking-wide" style={{ color }}>{title}</h3>
       </div>
-      <div className="flex-1">
-        <p className="text-sm text-muted-foreground">{record.stat}</p>
-        <p className="font-bold">{record.playerName}</p>
-      </div>
-      <PositionBadge position={record.position as any} />
-      <div className="text-right">
-        <p className="font-mono text-xl font-bold text-primary">
-          {record.value.toLocaleString()}
-        </p>
+      <div className="space-y-2">
+        {records.map((r, i) => (
+          <RecordRow key={r.stat} record={r} rank={i + 1} />
+        ))}
       </div>
     </div>
   );
@@ -184,47 +206,29 @@ const RecordsTab = () => {
       {/* Header */}
       <div className="glass-card-glow p-8 mb-8 text-center">
         <Trophy className="w-16 h-16 text-primary mx-auto mb-4" />
-        <h2 className="font-display text-5xl font-bold tracking-wider text-primary mb-2">
-          LEAGUE RECORDS
-        </h2>
-        <p className="text-muted-foreground">
-          All-time statistical leaders across all categories
-        </p>
+        <h2 className="font-display text-5xl font-bold tracking-wider text-primary mb-2">ALL-TIME RECORDS</h2>
+        <p className="text-muted-foreground">League Leaders Across All Statistical Categories</p>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Offensive Records */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap className="w-5 h-5 text-chart-4" />
-            <h3 className="font-display text-xl font-bold tracking-wide text-chart-4">OFFENSE</h3>
-          </div>
-          {records.offense.map((record, i) => (
-            <RecordCard key={record.stat} record={record} index={i} />
-          ))}
-        </div>
-
-        {/* Defensive Records */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="w-5 h-5 text-accent" />
-            <h3 className="font-display text-xl font-bold tracking-wide text-accent">DEFENSE</h3>
-          </div>
-          {records.defense.map((record, i) => (
-            <RecordCard key={record.stat} record={record} index={i} />
-          ))}
-        </div>
-
-        {/* Metric Records */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Target className="w-5 h-5 text-metric-elite" />
-            <h3 className="font-display text-xl font-bold tracking-wide text-metric-elite">METRICS</h3>
-          </div>
-          {records.metrics.map((record, i) => (
-            <RecordCard key={record.stat} record={record} index={i} />
-          ))}
-        </div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        {records.qbRecords.length > 0 && (
+          <Section title="QUARTERBACK RECORDS" records={records.qbRecords} color="hsl(var(--primary))" />
+        )}
+        {records.rbRecords.length > 0 && (
+          <Section title="RUNNING BACK RECORDS" records={records.rbRecords} color="hsl(var(--accent))" />
+        )}
+        {records.wrRecords.length > 0 && (
+          <Section title="WIDE RECEIVER RECORDS" records={records.wrRecords} color="hsl(var(--chart-4))" />
+        )}
+        {records.teRecords.length > 0 && (
+          <Section title="TIGHT END RECORDS" records={records.teRecords} color="hsl(var(--chart-3))" />
+        )}
+        {records.defRecords.length > 0 && (
+          <Section title="DEFENSIVE RECORDS" records={records.defRecords} color="hsl(var(--destructive))" />
+        )}
+        {records.accoladeRecords.length > 0 && (
+          <Section title="ACCOLADES & METRICS" records={records.accoladeRecords} color="hsl(var(--metric-elite))" />
+        )}
       </div>
     </div>
   );
