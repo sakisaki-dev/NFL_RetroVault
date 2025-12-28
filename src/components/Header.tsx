@@ -47,46 +47,46 @@ const Header = ({ activeTab, onTabChange }: HeaderProps) => {
 
           {/* Navigation - Apple style pill navigation */}
           <Tabs value={activeTab} onValueChange={onTabChange}>
-            <TabsList className="bg-secondary/50 backdrop-blur-sm border border-border/20 p-1.5 rounded-full h-auto gap-1">
+            <TabsList className="bg-secondary/50 backdrop-blur-sm border border-border/20 p-1.5 rounded-full h-auto gap-1 relative">
               <TabsTrigger 
                 value="career" 
-                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all"
+                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all duration-300 ease-out"
               >
                 Career
               </TabsTrigger>
               <TabsTrigger 
                 value="season"
-                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all"
+                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all duration-300 ease-out"
               >
                 Season
               </TabsTrigger>
               <TabsTrigger 
                 value="teams"
-                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all"
+                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all duration-300 ease-out"
               >
                 Teams
               </TabsTrigger>
               <TabsTrigger 
                 value="hof"
-                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all"
+                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all duration-300 ease-out"
               >
                 Hall of Fame
               </TabsTrigger>
               <TabsTrigger 
                 value="records"
-                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all"
+                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all duration-300 ease-out"
               >
                 Records
               </TabsTrigger>
               <TabsTrigger 
                 value="compare"
-                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all"
+                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all duration-300 ease-out"
               >
                 Compare
               </TabsTrigger>
               <TabsTrigger 
                 value="commentary"
-                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all"
+                className="rounded-full px-5 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all duration-300 ease-out"
               >
                 Commentary
               </TabsTrigger>
