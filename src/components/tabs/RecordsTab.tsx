@@ -79,10 +79,11 @@ const calculateSeasonScore = (
 };
 
 const getSeasonTier = (score: number) => {
-  if (score >= 400) return { label: 'LEGENDARY', color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/40' };
-  if (score >= 300) return { label: 'ELITE', color: 'text-purple-400', bg: 'bg-purple-500/15', border: 'border-purple-500/40' };
-  if (score >= 200) return { label: 'GREAT', color: 'text-blue-400', bg: 'bg-blue-500/15', border: 'border-blue-500/40' };
-  return { label: 'GOOD', color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/40' };
+  if (score >= 800) return { label: 'LEGENDARY', color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/40' };
+  if (score >= 600) return { label: 'ELITE', color: 'text-purple-400', bg: 'bg-purple-500/15', border: 'border-purple-500/40' };
+  if (score >= 400) return { label: 'GREAT', color: 'text-blue-400', bg: 'bg-blue-500/15', border: 'border-blue-500/40' };
+  if (score >= 250) return { label: 'NOTABLE', color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/40' };
+  return { label: 'SOLID', color: 'text-slate-400', bg: 'bg-slate-500/15', border: 'border-slate-500/40' };
 };
 
 const RecordRow = ({ record, rank }: { record: RecordEntry; rank: number }) => {
@@ -375,12 +376,37 @@ const RecordsTab = () => {
   }
 
   const Section = ({ title, records, color }: { title: string; records: RecordEntry[]; color: string }) => (
-    <div className="glass-card p-6 space-y-4">
-      <div className="flex items-center gap-2 border-b border-border/30 pb-3">
-        <Crown className="w-5 h-5" style={{ color }} />
-        <h3 className="font-display text-xl font-bold tracking-wide" style={{ color }}>{title}</h3>
+    <div 
+      className="relative overflow-hidden rounded-2xl border-2 p-6 space-y-4"
+      style={{ 
+        borderColor: `${color}40`,
+        background: `linear-gradient(135deg, ${color}08 0%, transparent 50%, ${color}05 100%)`
+      }}
+    >
+      {/* Decorative corner accent */}
+      <div 
+        className="absolute top-0 right-0 w-32 h-32 opacity-10"
+        style={{
+          background: `radial-gradient(circle at top right, ${color}, transparent 70%)`
+        }}
+      />
+      <div 
+        className="absolute bottom-0 left-0 w-24 h-24 opacity-5"
+        style={{
+          background: `radial-gradient(circle at bottom left, ${color}, transparent 70%)`
+        }}
+      />
+      
+      <div className="relative flex items-center gap-3 border-b pb-4" style={{ borderColor: `${color}30` }}>
+        <div 
+          className="flex items-center justify-center w-10 h-10 rounded-xl"
+          style={{ backgroundColor: `${color}20` }}
+        >
+          <Crown className="w-5 h-5" style={{ color }} />
+        </div>
+        <h3 className="font-display text-2xl font-bold tracking-wide" style={{ color }}>{title}</h3>
       </div>
-      <div className="space-y-2">
+      <div className="relative space-y-3">
         {records.map((r, i) => (
           <RecordRow key={`${r.stat}-${r.playerName}`} record={r} rank={i + 1} />
         ))}
@@ -492,17 +518,50 @@ const RecordsTab = () => {
           {greatestSeasons.length > 0 ? (
             <div className="space-y-6">
               {/* Formula explanation */}
-              <div className="glass-card p-4 border-l-4 border-purple-500">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="w-4 h-4 text-purple-400" />
-                  <span className="font-bold text-purple-400">Season Score Formula</span>
+              <div className="relative overflow-hidden rounded-2xl border border-purple-500/40 bg-gradient-to-br from-purple-500/10 via-transparent to-purple-500/5 p-6">
+                <div className="absolute top-0 right-0 w-40 h-40 opacity-10 bg-gradient-radial from-purple-500 to-transparent" />
+                
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-500/20">
+                    <TrendingUp className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-purple-400">Season Score Formula</h3>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  QB: (PassYds/50) + (TD×10) + (RushYds/20) - (INT×5) + Awards | 
-                  RB: (RushYds/20) + (TD×15) + (RecYds/30) + Awards | 
-                  WR/TE: (RecYds/20) + (Rec×2) + (TD×15) + Awards | 
-                  DEF: (Tackles×2) + (Sacks×15) + (INT×20) + Awards
-                </p>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-xs font-bold shrink-0">QB</span>
+                      <span className="text-sm text-muted-foreground font-mono">(PassYds ÷ 50) + (TD × 10) + (RushYds ÷ 20) - (INT × 5) + Awards</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-bold shrink-0">RB</span>
+                      <span className="text-sm text-muted-foreground font-mono">(RushYds ÷ 20) + (TD × 15) + (RecYds ÷ 30) + Awards</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-bold shrink-0">WR/TE</span>
+                      <span className="text-sm text-muted-foreground font-mono">(RecYds ÷ 20) + (Rec × 2) + (TD × 15) + Awards</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-300 text-xs font-bold shrink-0">DEF</span>
+                      <span className="text-sm text-muted-foreground font-mono">(Tackles × 2) + (Sacks × 15) + (INT × 20) + Awards</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-purple-500/20">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="text-purple-400 font-semibold">Award Bonuses:</span> MVP (+100) • OPOY (+75) • SB MVP (+80) • Ring (+60) • ROTY (+50)
+                  </p>
+                  <div className="flex flex-wrap gap-3 mt-2">
+                    <span className="text-xs"><span className="text-amber-400 font-bold">LEGENDARY</span> 800+</span>
+                    <span className="text-xs"><span className="text-purple-400 font-bold">ELITE</span> 600+</span>
+                    <span className="text-xs"><span className="text-blue-400 font-bold">GREAT</span> 400+</span>
+                    <span className="text-xs"><span className="text-emerald-400 font-bold">NOTABLE</span> 250+</span>
+                  </div>
+                </div>
               </div>
 
               {/* Greatest seasons list */}
