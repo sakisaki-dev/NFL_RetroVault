@@ -71,6 +71,8 @@ npm run dev
 
 
 ## Project Structure ## 
+```
+
 NFL_RetroVault/
 ├─ src/
 │  ├─ components/       # React UI components
@@ -86,6 +88,7 @@ NFL_RetroVault/
 ├─ tailwind.config.ts
 ├─ postcss.config.js
 └─ README.md
+```
 
 ## Contact ## 
 Email: samachir@ucsc.edu
