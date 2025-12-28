@@ -23,7 +23,6 @@ const parseCSVLine = (line: string): string[] => {
     const ch = line[i];
 
     if (ch === '"') {
-      // Escaped quote inside quoted field
       if (inQuotes && line[i + 1] === '"') {
         current += '"';
         i++;
@@ -73,6 +72,11 @@ const getField = (row: string[], header: HeaderIndex, key: string, occurrence = 
   return (row[indices[occurrence]] ?? '').trim();
 };
 
+// Get field by index directly (for metrics that aren't in all headers)
+const getByIndex = (row: string[], index: number): string => {
+  return (row[index] ?? '').trim();
+};
+
 const parseNum = (val: string): number => {
   if (!val || val.trim() === '') return 0;
   const cleaned = val.replace(/["',]/g, '').trim();
@@ -106,7 +110,6 @@ const findPositionSections = (
     const headerRow = i + 1;
     const dataStart = i + 2;
 
-    // End at next position marker; ignore empty rows.
     let dataEnd = lines.length;
     for (let j = dataStart; j < lines.length; j++) {
       const cell = (lines[j][0] ?? '').trim().toUpperCase();
@@ -122,7 +125,17 @@ const findPositionSections = (
   return sections;
 };
 
-// ---------- Row parsers (header-driven) ----------
+// ---------- Fixed column indices for metrics (consistent across all positions) ----------
+// These columns aren't labeled in non-QB headers but data exists at these indices
+const METRICS_INDICES = {
+  trueTalent: 20,
+  dominance: 21,
+  careerLegacy: 22,
+  tpg: 23,
+  nicknames: 25,
+};
+
+// ---------- Row parsers (header-driven with fallback for metrics) ----------
 
 const baseFields = (row: string[], header: HeaderIndex) => {
   const name = parseText(getField(row, header, 'Name'));
@@ -132,10 +145,16 @@ const baseFields = (row: string[], header: HeaderIndex) => {
   const team = parseText(getField(row, header, 'Team'));
   const status = parseStatus(getField(row, header, 'Status'));
 
-  // Some sheets may omit team column (e.g., WR header shows empty column)
+  // Try header-based lookup first, fallback to fixed indices for metrics
+  const trueTalent = parseNum(getField(row, header, 'True Talent') || getByIndex(row, METRICS_INDICES.trueTalent));
+  const dominance = parseNum(getField(row, header, 'Dominance') || getByIndex(row, METRICS_INDICES.dominance));
+  const careerLegacy = parseNum(getField(row, header, 'Career Legacy') || getByIndex(row, METRICS_INDICES.careerLegacy));
+  const tpg = parseNum(getField(row, header, 'TPG') || getByIndex(row, METRICS_INDICES.tpg));
+  
   const nickname =
     parseText(getField(row, header, 'Nicknames')) ??
-    parseText(getField(row, header, 'Nickname'));
+    parseText(getField(row, header, 'Nickname')) ??
+    parseText(getByIndex(row, METRICS_INDICES.nicknames));
 
   return {
     name,
@@ -148,10 +167,10 @@ const baseFields = (row: string[], header: HeaderIndex) => {
     opoy: parseNum(getField(row, header, 'OPOY')) || parseNum(getField(row, header, 'DPOY')),
     sbmvp: parseNum(getField(row, header, 'SBMVP')),
     roty: parseNum(getField(row, header, 'ROTY')),
-    trueTalent: parseNum(getField(row, header, 'True Talent')),
-    dominance: parseNum(getField(row, header, 'Dominance')),
-    careerLegacy: parseNum(getField(row, header, 'Career Legacy')),
-    tpg: parseNum(getField(row, header, 'TPG')),
+    trueTalent,
+    dominance,
+    careerLegacy,
+    tpg,
     nickname,
   };
 };
@@ -160,7 +179,6 @@ const parseQB = (row: string[], header: HeaderIndex): QBPlayer | null => {
   const base = baseFields(row, header);
   if (!base) return null;
 
-  // QB has two "Att" columns: pass attempts (first) and rush attempts (second)
   const passAttempts = parseNum(getField(row, header, 'Att', 0));
   const rushAttempts = parseNum(getField(row, header, 'Att', 1));
 
@@ -200,7 +218,6 @@ const parseReceiver = (row: string[], header: HeaderIndex, position: 'WR' | 'TE'
   const base = baseFields(row, header);
   if (!base) return null;
 
-  // Some sheets label TDs just as TDs
   const recTD = parseNum(getField(row, header, 'Rec TD')) || parseNum(getField(row, header, 'TDs'));
 
   return {
@@ -225,7 +242,11 @@ const parseOL = (row: string[], header: HeaderIndex): OLPlayer | null => {
   };
 };
 
-const parseDefensive = <T extends 'LB' | 'DB' | 'DL'>(row: string[], header: HeaderIndex, position: T): (LBPlayer | DBPlayer | DLPlayer) | null => {
+const parseDefensive = <T extends 'LB' | 'DB' | 'DL'>(
+  row: string[],
+  header: HeaderIndex,
+  position: T,
+): (LBPlayer | DBPlayer | DLPlayer) | null => {
   const base = baseFields(row, header);
   if (!base) return null;
 
@@ -290,7 +311,6 @@ export const parseCSV = (csvContent: string): LeagueData => {
   return data;
 };
 
-// Calculate stat leaders for a position group
 export const calculateLeaders = (
   players: any[],
   statKeys: string[],
