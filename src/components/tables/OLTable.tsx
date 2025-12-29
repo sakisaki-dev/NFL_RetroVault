@@ -6,8 +6,10 @@ import MetricCell from '../MetricCell';
 import StatCell from '../StatCell';
 import AwardsCell from '../AwardsCell';
 import PlayerDetailCard from '../PlayerDetailCard';
+import PlayerEditButton from '../PlayerEditButton';
 import { calculateLeaders } from '@/utils/csvParser';
 import { getTeamColors } from '@/utils/teamColors';
+import { useLeague } from '@/context/LeagueContext';
 
 interface OLTableProps {
   players: OLPlayer[];
@@ -17,6 +19,7 @@ interface OLTableProps {
 
 const OLTable = ({ players, searchQuery = '', activeOnly = false }: OLTableProps) => {
   const [selectedPlayer, setSelectedPlayer] = useState<OLPlayer | null>(null);
+  const { refreshData } = useLeague();
 
   const filteredPlayers = useMemo(() => {
     return players.filter(p => {
@@ -69,16 +72,22 @@ const OLTable = ({ players, searchQuery = '', activeOnly = false }: OLTableProps
                 return (
                   <tr 
                     key={player.name} 
-                    className="hover:bg-secondary/20 transition-colors cursor-pointer"
+                    className="group hover:bg-secondary/20 transition-colors cursor-pointer"
                     style={teamColors ? { borderLeft: `3px solid hsl(${teamColors.primary})` } : undefined}
                     onClick={() => setSelectedPlayer(player)}
                   >
                     <td className="sticky left-0 bg-card/90 backdrop-blur z-10">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{player.name}</span>
-                        {player.nickname && (
-                          <span className="text-xs text-muted-foreground italic">"{player.nickname}"</span>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col flex-1">
+                          <span className="font-medium text-foreground">{player.name}</span>
+                          {player.nickname && (
+                            <span className="text-xs text-muted-foreground italic">"{player.nickname}"</span>
+                          )}
+                        </div>
+                        <PlayerEditButton
+                          player={player}
+                          onSave={refreshData}
+                        />
                       </div>
                     </td>
                     <td>

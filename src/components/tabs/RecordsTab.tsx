@@ -237,11 +237,17 @@ const RecordsTab = () => {
   }, [careerData]);
 
   // Single-season records from stored history
+  // IMPORTANT: Only include seasons from players who have multiple seasons recorded
+  // Players with only 1 season are considered "legacy imports" and excluded
   const singleSeasonRecords = useMemo(() => {
     const history = loadSeasonHistory();
     const allSnapshots: { playerKey: string; snapshot: SeasonSnapshot }[] = [];
     
+    // Only include players with more than one season recorded (not legacy imports)
     Object.entries(history).forEach(([playerKey, snapshots]) => {
+      // If player only has 1 season, they're a legacy import - exclude from single-season records
+      if (snapshots.length <= 1) return;
+      
       snapshots.forEach((snapshot) => {
         allSnapshots.push({ playerKey, snapshot });
       });
@@ -311,11 +317,16 @@ const RecordsTab = () => {
   }, []);
 
   // Greatest seasons of all time
+  // IMPORTANT: Only include seasons from players who have multiple seasons recorded
+  // Players with only 1 season are considered "legacy imports" and excluded
   const greatestSeasons = useMemo((): GreatSeason[] => {
     const history = loadSeasonHistory();
     const seasons: GreatSeason[] = [];
 
     Object.entries(history).forEach(([playerKey, snapshots]) => {
+      // If player only has 1 season, they're a legacy import - exclude from greatest seasons
+      if (snapshots.length <= 1) return;
+      
       const [position, ...nameParts] = playerKey.split(':');
       const playerName = nameParts.join(':');
 

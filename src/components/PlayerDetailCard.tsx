@@ -1,10 +1,13 @@
-import { Trophy, Star, Crown, TrendingUp, Calendar, Medal, Award } from 'lucide-react';
+import { Trophy, Star, Crown, TrendingUp, Calendar, Medal, Award, Pencil } from 'lucide-react';
 import type { Player, QBPlayer, RBPlayer, WRPlayer, TEPlayer, LBPlayer, DBPlayer, DLPlayer } from '@/types/player';
 import { getTeamColors } from '@/utils/teamColors';
 import { getMetricColor, getMetricBgColor, getMetricTier, getTierLabel } from '@/utils/metricColors';
 import PositionBadge from './PositionBadge';
 import StatusBadge from './StatusBadge';
+import PlayerEditDialog from './PlayerEditDialog';
 import { useLeague } from '@/context/LeagueContext';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -27,7 +30,8 @@ interface PlayerDetailCardProps {
 }
 
 const PlayerDetailCard = ({ player, onClose }: PlayerDetailCardProps) => {
-  const { getSeasonHistory } = useLeague();
+  const { getSeasonHistory, refreshData } = useLeague();
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   if (!player) return null;
 
@@ -135,6 +139,15 @@ const PlayerDetailCard = ({ player, onClose }: PlayerDetailCardProps) => {
                   )}
                 </div>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsEditOpen(true)}
+                title="Edit player"
+                className="h-9 w-9"
+              >
+                <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+              </Button>
             </div>
           </DialogHeader>
         </div>
@@ -301,6 +314,16 @@ const PlayerDetailCard = ({ player, onClose }: PlayerDetailCardProps) => {
           )}
         </div>
       </DialogContent>
+
+      {/* Edit Dialog */}
+      <PlayerEditDialog
+        player={isEditOpen ? player : null}
+        onClose={() => setIsEditOpen(false)}
+        onSave={() => {
+          refreshData();
+          setIsEditOpen(false);
+        }}
+      />
     </Dialog>
   );
 };
