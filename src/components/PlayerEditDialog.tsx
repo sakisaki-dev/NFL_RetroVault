@@ -169,7 +169,7 @@ const PlayerEditDialog = ({ player, isNewPlayer = false, onClose, onSave }: Play
           if (typeof v === 'number') stats[k] = v;
         });
         return { season, stats, isAdditive: false };
-      })));
+      }));
     } else if (isNewPlayer) {
       // Reset for new player
       setName('');
