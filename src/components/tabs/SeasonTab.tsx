@@ -1,10 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLeague } from '@/context/LeagueContext';
 import FileUpload from '../FileUpload';
-import { Calendar, TrendingUp, TrendingDown, Star, Zap, Trophy, Crown, Newspaper, Target } from 'lucide-react';
+import { 
+  Calendar, TrendingUp, TrendingDown, Star, Zap, Trophy, Crown, Newspaper, Target,
+  UserMinus, Medal, Award, Users, Sparkles, Shield
+} from 'lucide-react';
 import type { Player, QBPlayer, RBPlayer, WRPlayer, TEPlayer, LBPlayer, DBPlayer, DLPlayer } from '@/types/player';
 import PositionBadge from '../PositionBadge';
 import { getTeamColors } from '@/utils/teamColors';
+import PlayerDetailCard from '../PlayerDetailCard';
 import {
   Table,
   TableBody,
@@ -13,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type SeasonTier = 'legendary' | 'great' | 'good' | 'average' | 'poor';
 
@@ -39,12 +44,123 @@ const getTierInfo = (tier: SeasonTier) => {
 };
 
 const SeasonTab = () => {
-  const { careerData, seasonData, currentSeason, loadSeasonData } = useLeague();
+  const { careerData, seasonData, previousData, currentSeason, loadSeasonData, dataVersion } = useLeague();
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
   const handleFileLoad = (content: string, filename: string, seasonNumber?: number) => {
     const seasonName = seasonNumber ? `Y${seasonNumber}` : 'New Season';
     loadSeasonData(content, seasonName);
   };
+
+  // Calculate retirements (players in previousData but not active in careerData, or status changed)
+  const retirements = useMemo(() => {
+    if (!previousData || !careerData) return [];
+    
+    const prevPlayers = [
+      ...previousData.quarterbacks,
+      ...previousData.runningbacks,
+      ...previousData.widereceivers,
+      ...previousData.tightends,
+      ...previousData.offensiveline,
+      ...previousData.linebackers,
+      ...previousData.defensivebacks,
+      ...previousData.defensiveline,
+    ].filter(p => p.status === 'Active');
+
+    const currentPlayers = [
+      ...careerData.quarterbacks,
+      ...careerData.runningbacks,
+      ...careerData.widereceivers,
+      ...careerData.tightends,
+      ...careerData.offensiveline,
+      ...careerData.linebackers,
+      ...careerData.defensivebacks,
+      ...careerData.defensiveline,
+    ];
+
+    const retired: Player[] = [];
+    prevPlayers.forEach(prev => {
+      const current = currentPlayers.find(c => c.name === prev.name && c.position === prev.position);
+      if (current && current.status === 'Retired') {
+        retired.push(current);
+      }
+    });
+
+    return retired.sort((a, b) => b.careerLegacy - a.careerLegacy);
+  }, [previousData, careerData, dataVersion]);
+
+  // Find championship winner (player who gained a ring this season)
+  const championshipWinner = useMemo(() => {
+    if (!seasonData) return null;
+    
+    const allSeasonPlayers = [
+      ...seasonData.quarterbacks,
+      ...seasonData.runningbacks,
+      ...seasonData.widereceivers,
+      ...seasonData.tightends,
+      ...seasonData.offensiveline,
+      ...seasonData.linebackers,
+      ...seasonData.defensivebacks,
+      ...seasonData.defensiveline,
+    ];
+
+    const ringWinners = allSeasonPlayers.filter(p => (p as any).rings > 0);
+    if (ringWinners.length === 0) return null;
+
+    // Get the team from the first ring winner
+    const winnerTeam = ringWinners[0]?.team;
+    return {
+      team: winnerTeam,
+      players: ringWinners,
+    };
+  }, [seasonData, dataVersion]);
+
+  // Find award winners
+  const awardWinners = useMemo(() => {
+    if (!seasonData) return { mvp: null, opoy: null, dpoy: null, sbmvp: null, roty: null };
+    
+    const allSeasonPlayers = [
+      ...seasonData.quarterbacks,
+      ...seasonData.runningbacks,
+      ...seasonData.widereceivers,
+      ...seasonData.tightends,
+      ...seasonData.offensiveline,
+      ...seasonData.linebackers,
+      ...seasonData.defensivebacks,
+      ...seasonData.defensiveline,
+    ];
+
+    const mvpWinner = allSeasonPlayers.find(p => (p as any).mvp > 0);
+    const opoyWinner = allSeasonPlayers.find(p => (p as any).opoy > 0 && !['LB', 'DB', 'DL'].includes(p.position));
+    const dpoyWinner = allSeasonPlayers.find(p => (p as any).opoy > 0 && ['LB', 'DB', 'DL'].includes(p.position));
+    const sbmvpWinner = allSeasonPlayers.find(p => (p as any).sbmvp > 0);
+    const rotyWinner = allSeasonPlayers.find(p => (p as any).roty > 0);
+
+    // Get career versions for display
+    const allCareerPlayers = careerData ? [
+      ...careerData.quarterbacks,
+      ...careerData.runningbacks,
+      ...careerData.widereceivers,
+      ...careerData.tightends,
+      ...careerData.offensiveline,
+      ...careerData.linebackers,
+      ...careerData.defensivebacks,
+      ...careerData.defensiveline,
+    ] : [];
+
+    const getCareerPlayer = (p: Player | undefined) => {
+      if (!p) return null;
+      return allCareerPlayers.find(c => c.name === p.name && c.position === p.position) || p;
+    };
+
+    return {
+      mvp: getCareerPlayer(mvpWinner),
+      opoy: getCareerPlayer(opoyWinner),
+      dpoy: getCareerPlayer(dpoyWinner),
+      sbmvp: getCareerPlayer(sbmvpWinner),
+      roty: getCareerPlayer(rotyWinner),
+    };
+  }, [seasonData, careerData, dataVersion]);
 
   const performances = useMemo((): SeasonPerformance[] => {
     if (!seasonData || !careerData) return [];
@@ -167,7 +283,7 @@ const SeasonTab = () => {
     );
 
     return allPerformances;
-  }, [seasonData, careerData]);
+  }, [seasonData, careerData, dataVersion]);
 
   const topPerformers = useMemo(() => {
     const legendary = performances.filter((p) => p.tier === 'legendary');
@@ -239,6 +355,177 @@ const SeasonTab = () => {
 
       {hasSeasonData && (
         <>
+          {/* Championship & Awards Section */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Championship Winner */}
+            {championshipWinner && (
+              <div className="glass-card p-6 border-2 border-chart-4/30 bg-gradient-to-br from-chart-4/10 to-transparent">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-chart-4/20 flex items-center justify-center">
+                    <Trophy className="w-6 h-6 text-chart-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-chart-4">CHAMPIONS</h3>
+                    <p className="text-muted-foreground text-sm">{currentSeason} Super Bowl Winners</p>
+                  </div>
+                </div>
+                {championshipWinner.team && (
+                  <div 
+                    className="text-2xl font-display font-bold mb-3"
+                    style={{
+                      color: getTeamColors(championshipWinner.team) 
+                        ? `hsl(${getTeamColors(championshipWinner.team)!.primary})` 
+                        : undefined
+                    }}
+                  >
+                    {championshipWinner.team}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {championshipWinner.players.slice(0, 5).map((p) => (
+                    <span 
+                      key={p.name} 
+                      className="text-xs px-2 py-1 rounded bg-chart-4/20 text-chart-4 cursor-pointer hover:bg-chart-4/30"
+                      onClick={() => setSelectedPlayer(p)}
+                    >
+                      {p.name} ({p.position})
+                    </span>
+                  ))}
+                  {championshipWinner.players.length > 5 && (
+                    <span className="text-xs px-2 py-1 rounded bg-secondary/50 text-muted-foreground">
+                      +{championshipWinner.players.length - 5} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Award Winners */}
+            <div className="glass-card p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Award className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-display text-xl font-bold text-primary">AWARD WINNERS</h3>
+                  <p className="text-muted-foreground text-sm">{currentSeason} Individual Honors</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {awardWinners.mvp && (
+                  <div 
+                    className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 cursor-pointer hover:bg-amber-500/20 transition-colors"
+                    onClick={() => setSelectedPlayer(awardWinners.mvp)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Crown className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs text-amber-400 font-bold">MVP</span>
+                    </div>
+                    <p className="font-medium text-foreground text-sm">{awardWinners.mvp.name}</p>
+                    <p className="text-xs text-muted-foreground">{awardWinners.mvp.position} • {awardWinners.mvp.team}</p>
+                  </div>
+                )}
+                {awardWinners.opoy && (
+                  <div 
+                    className="p-3 rounded-lg bg-primary/10 border border-primary/30 cursor-pointer hover:bg-primary/20 transition-colors"
+                    onClick={() => setSelectedPlayer(awardWinners.opoy)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <span className="text-xs text-primary font-bold">OPOY</span>
+                    </div>
+                    <p className="font-medium text-foreground text-sm">{awardWinners.opoy.name}</p>
+                    <p className="text-xs text-muted-foreground">{awardWinners.opoy.position} • {awardWinners.opoy.team}</p>
+                  </div>
+                )}
+                {awardWinners.dpoy && (
+                  <div 
+                    className="p-3 rounded-lg bg-accent/10 border border-accent/30 cursor-pointer hover:bg-accent/20 transition-colors"
+                    onClick={() => setSelectedPlayer(awardWinners.dpoy)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Shield className="w-4 h-4 text-accent" />
+                      <span className="text-xs text-accent font-bold">DPOY</span>
+                    </div>
+                    <p className="font-medium text-foreground text-sm">{awardWinners.dpoy.name}</p>
+                    <p className="text-xs text-muted-foreground">{awardWinners.dpoy.position} • {awardWinners.dpoy.team}</p>
+                  </div>
+                )}
+                {awardWinners.sbmvp && (
+                  <div 
+                    className="p-3 rounded-lg bg-chart-4/10 border border-chart-4/30 cursor-pointer hover:bg-chart-4/20 transition-colors"
+                    onClick={() => setSelectedPlayer(awardWinners.sbmvp)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Medal className="w-4 h-4 text-chart-4" />
+                      <span className="text-xs text-chart-4 font-bold">SB MVP</span>
+                    </div>
+                    <p className="font-medium text-foreground text-sm">{awardWinners.sbmvp.name}</p>
+                    <p className="text-xs text-muted-foreground">{awardWinners.sbmvp.position} • {awardWinners.sbmvp.team}</p>
+                  </div>
+                )}
+                {awardWinners.roty && (
+                  <div 
+                    className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20 transition-colors"
+                    onClick={() => setSelectedPlayer(awardWinners.roty)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Star className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs text-emerald-400 font-bold">ROTY</span>
+                    </div>
+                    <p className="font-medium text-foreground text-sm">{awardWinners.roty.name}</p>
+                    <p className="text-xs text-muted-foreground">{awardWinners.roty.position} • {awardWinners.roty.team}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Retirements Section */}
+          {retirements.length > 0 && (
+            <div className="glass-card p-6 border border-destructive/20 bg-gradient-to-br from-destructive/5 to-transparent">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center">
+                  <UserMinus className="w-6 h-6 text-destructive" />
+                </div>
+                <div>
+                  <h3 className="font-display text-xl font-bold text-destructive">RETIREMENTS</h3>
+                  <p className="text-muted-foreground text-sm">{retirements.length} player{retirements.length !== 1 ? 's' : ''} hung up the cleats</p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {retirements.slice(0, 6).map((player) => {
+                  const teamColors = getTeamColors(player.team);
+                  return (
+                    <div 
+                      key={`${player.position}:${player.name}`}
+                      className="p-3 rounded-lg bg-secondary/30 border border-border/30 cursor-pointer hover:bg-secondary/50 transition-colors"
+                      style={teamColors ? { borderLeftColor: `hsl(${teamColors.primary})`, borderLeftWidth: '3px' } : undefined}
+                      onClick={() => setSelectedPlayer(player)}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-foreground">{player.name}</span>
+                        <PositionBadge position={player.position} className="text-xs" />
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{player.games} games</span>
+                        <span>•</span>
+                        <span>{player.rings} 🏆</span>
+                        <span>•</span>
+                        <span className="text-primary">{player.careerLegacy.toLocaleString()} legacy</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {retirements.length > 6 && (
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  +{retirements.length - 6} more retirements
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Breaking News Section */}
           <div className="glass-card p-6">
             <div className="flex items-center gap-3 border-b border-border/30 pb-4 mb-6">
@@ -262,7 +549,12 @@ const SeasonTab = () => {
                   <p className="text-muted-foreground leading-relaxed">
                     {topPerformers.legendary.map((p, i) => (
                       <span key={p.player.name}>
-                        <span className="text-foreground font-semibold">{p.player.name}</span>
+                        <span 
+                          className="text-foreground font-semibold cursor-pointer hover:text-primary"
+                          onClick={() => setSelectedPlayer(p.player)}
+                        >
+                          {p.player.name}
+                        </span>
                         {' ('}{p.player.position}{p.player.team ? `, ${p.player.team}` : ''}{') '}
                         recorded {p.keyStats[0]?.value.toLocaleString()} {p.keyStats[0]?.label.toLowerCase()}
                         {i < topPerformers.legendary.length - 1 ? '. ' : '.'}
@@ -288,8 +580,9 @@ const SeasonTab = () => {
                 return (
                   <div 
                     key={pos} 
-                    className="p-4 rounded-xl bg-secondary/30 border border-border/30"
+                    className="p-4 rounded-xl bg-secondary/30 border border-border/30 cursor-pointer hover:bg-secondary/50 transition-colors"
                     style={teamColors ? { borderLeftColor: `hsl(${teamColors.primary})`, borderLeftWidth: '3px' } : undefined}
+                    onClick={() => setSelectedPlayer(leader.player)}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -325,18 +618,18 @@ const SeasonTab = () => {
               <h3 className="font-display text-xl font-bold">SEASON {currentSeason} PLAYER PERFORMANCES</h3>
               <span className="text-muted-foreground text-sm">({performances.length} players)</span>
             </div>
-            <div className="overflow-x-auto">
+            <ScrollArea className="h-[500px]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-8">#</TableHead>
-                    <TableHead className="sticky left-0 bg-secondary/80 backdrop-blur z-10">Player</TableHead>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Pos</TableHead>
-                    <TableHead className="text-center">Tier</TableHead>
-                    <TableHead className="text-right">Stat 1</TableHead>
-                    <TableHead className="text-right">Stat 2</TableHead>
-                    <TableHead className="text-right">Stat 3</TableHead>
+                    <TableHead className="w-8 sticky top-0 bg-secondary/90">#</TableHead>
+                    <TableHead className="sticky left-0 top-0 bg-secondary/90 backdrop-blur z-10">Player</TableHead>
+                    <TableHead className="sticky top-0 bg-secondary/90">Team</TableHead>
+                    <TableHead className="sticky top-0 bg-secondary/90">Pos</TableHead>
+                    <TableHead className="text-center sticky top-0 bg-secondary/90">Tier</TableHead>
+                    <TableHead className="text-right sticky top-0 bg-secondary/90">Stat 1</TableHead>
+                    <TableHead className="text-right sticky top-0 bg-secondary/90">Stat 2</TableHead>
+                    <TableHead className="text-right sticky top-0 bg-secondary/90">Stat 3</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -349,8 +642,9 @@ const SeasonTab = () => {
                     return (
                       <TableRow 
                         key={perf.player.name}
-                        className="hover:bg-secondary/20"
+                        className="hover:bg-secondary/20 cursor-pointer"
                         style={teamColors ? { borderLeft: `3px solid hsl(${teamColors.primary})` } : undefined}
+                        onClick={() => setSelectedPlayer(perf.player)}
                       >
                         <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
                         <TableCell className="sticky left-0 bg-card/90 backdrop-blur z-10">
@@ -397,7 +691,7 @@ const SeasonTab = () => {
                   })}
                 </TableBody>
               </Table>
-            </div>
+            </ScrollArea>
           </div>
 
           {/* Upload Next Season */}
@@ -406,6 +700,12 @@ const SeasonTab = () => {
           </div>
         </>
       )}
+
+      {/* Player Detail Card */}
+      <PlayerDetailCard 
+        player={selectedPlayer} 
+        onClose={() => setSelectedPlayer(null)} 
+      />
     </div>
   );
 };
