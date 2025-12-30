@@ -221,47 +221,47 @@ const PlayerDetailCard = ({ player, onClose }: PlayerDetailCardProps) => {
             <div>
               <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-accent" />
-                Season-by-Season Breakdown
+                Season-by-Season Breakdown ({seasonHistory.length} seasons)
               </h4>
-              <ScrollArea className="max-h-48 rounded-lg border border-border/30">
+              <ScrollArea className="h-[200px] rounded-lg border border-border/30">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-secondary/30">
-                      <TableHead className="font-bold text-foreground">Season</TableHead>
-                      <TableHead className="text-right">GP</TableHead>
+                      <TableHead className="font-bold text-foreground sticky top-0 bg-secondary/80">Season</TableHead>
+                      <TableHead className="text-right sticky top-0 bg-secondary/80">GP</TableHead>
                       {player.position === 'QB' && (
                         <>
-                          <TableHead className="text-right">Pass Yds</TableHead>
-                          <TableHead className="text-right">Pass TD</TableHead>
-                          <TableHead className="text-right">INT</TableHead>
-                          <TableHead className="text-right">Rush Yds</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Pass Yds</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Pass TD</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">INT</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Rush Yds</TableHead>
                         </>
                       )}
                       {player.position === 'RB' && (
                         <>
-                          <TableHead className="text-right">Rush Yds</TableHead>
-                          <TableHead className="text-right">Rush TD</TableHead>
-                          <TableHead className="text-right">Rec Yds</TableHead>
-                          <TableHead className="text-right">Rec TD</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Rush Yds</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Rush TD</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Rec Yds</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Rec TD</TableHead>
                         </>
                       )}
                       {(player.position === 'WR' || player.position === 'TE') && (
                         <>
-                          <TableHead className="text-right">Rec</TableHead>
-                          <TableHead className="text-right">Rec Yds</TableHead>
-                          <TableHead className="text-right">Rec TD</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Rec</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Rec Yds</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Rec TD</TableHead>
                         </>
                       )}
                       {['LB', 'DB', 'DL'].includes(player.position) && (
                         <>
-                          <TableHead className="text-right">Tackles</TableHead>
-                          <TableHead className="text-right">Sacks</TableHead>
-                          <TableHead className="text-right">INT</TableHead>
-                          <TableHead className="text-right">FF</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Tackles</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">Sacks</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">INT</TableHead>
+                          <TableHead className="text-right sticky top-0 bg-secondary/80">FF</TableHead>
                         </>
                       )}
-                      <TableHead className="text-right">🏆</TableHead>
-                      <TableHead className="text-right">MVP</TableHead>
+                      <TableHead className="text-right sticky top-0 bg-secondary/80">🏆</TableHead>
+                      <TableHead className="text-right sticky top-0 bg-secondary/80">MVP</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

@@ -87,6 +87,77 @@ const getLatestSeasonFromSnapshots = (snapshots: SeasonCsvSnapshots): string => 
   return seasons[seasons.length - 1] || '';
 };
 
+// Merge player edits from IndexedDB into parsed league data
+const mergePlayerEdits = async (baseData: LeagueData): Promise<LeagueData> => {
+  try {
+    const edits = await getPlayerEdits();
+    if (!edits || Object.keys(edits).length === 0) return baseData;
+
+    const mergedData: LeagueData = {
+      quarterbacks: [...baseData.quarterbacks],
+      runningbacks: [...baseData.runningbacks],
+      widereceivers: [...baseData.widereceivers],
+      tightends: [...baseData.tightends],
+      offensiveline: [...baseData.offensiveline],
+      linebackers: [...baseData.linebackers],
+      defensivebacks: [...baseData.defensivebacks],
+      defensiveline: [...baseData.defensiveline],
+    };
+
+    const positionArrayMap: Record<string, keyof LeagueData> = {
+      QB: 'quarterbacks',
+      RB: 'runningbacks',
+      WR: 'widereceivers',
+      TE: 'tightends',
+      OL: 'offensiveline',
+      LB: 'linebackers',
+      DB: 'defensivebacks',
+      DL: 'defensiveline',
+    };
+
+    Object.values(edits).forEach((edit: PlayerEdit) => {
+      const arrayKey = positionArrayMap[edit.position];
+      if (!arrayKey) return;
+
+      const arr = mergedData[arrayKey] as Player[];
+      const existingIndex = arr.findIndex((p) => p.name === edit.name && p.position === edit.position);
+
+      const mergedPlayer: Player = {
+        name: edit.name,
+        position: edit.position as any,
+        team: edit.team || '',
+        nickname: edit.nickname,
+        status: edit.status,
+        games: edit.games,
+        rings: edit.rings,
+        mvp: edit.mvp,
+        opoy: edit.opoy,
+        sbmvp: edit.sbmvp,
+        roty: edit.roty,
+        trueTalent: edit.trueTalent,
+        dominance: edit.dominance,
+        careerLegacy: edit.careerLegacy,
+        tpg: edit.tpg,
+        ...edit.positionStats,
+      } as Player;
+
+      if (existingIndex >= 0) {
+        // Merge: edit values override CSV values
+        const existing = arr[existingIndex];
+        arr[existingIndex] = { ...existing, ...mergedPlayer };
+      } else if (edit.isManuallyAdded) {
+        // Add new player
+        arr.push(mergedPlayer);
+      }
+    });
+
+    return mergedData;
+  } catch (error) {
+    console.error('Error merging player edits:', error);
+    return baseData;
+  }
+};
+
 export const LeagueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [careerData, setCareerData] = useState<LeagueData | null>(null);
   const [seasonData, setSeasonData] = useState<LeagueData | null>(null);
@@ -95,13 +166,9 @@ export const LeagueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isLoading, setIsLoading] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
 
-  // Refresh data function - increments version to trigger re-renders
-  const refreshData = useCallback(() => {
-    setDataVersion((v) => v + 1);
-  }, []);
-
-  // Restore last session (keeps the app usable locally with just CSV inputs)
-  useEffect(() => {
+  // Core function to rebuild all data from storage + edits
+  const rebuildDataFromStorage = useCallback(async () => {
+    setIsLoading(true);
     try {
       const baseCsv = localStorage.getItem(STORAGE_KEYS.careerBaseCsv);
       const snapshots = loadSeasonSnapshots();
@@ -111,14 +178,16 @@ export const LeagueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (Object.keys(snapshots).length > 0) {
         const seasonToRestore = savedSeason && snapshots[savedSeason] ? savedSeason : getLatestSeasonFromSnapshots(snapshots);
         const nextCsv = snapshots[seasonToRestore];
-        const nextData = parseCSV(nextCsv);
+        const parsedData = parseCSV(nextCsv);
+        const nextData = await mergePlayerEdits(parsedData);
         setCareerData(nextData);
 
         const prevCsv = getPrevCsvForSeason(seasonToRestore, snapshots, baseCsv);
         if (prevCsv) {
           const prevData = parseCSV(prevCsv);
-          setPreviousData(prevData);
-          setSeasonData(diffLeagueData(prevData, nextData));
+          const mergedPrevData = await mergePlayerEdits(prevData);
+          setPreviousData(mergedPrevData);
+          setSeasonData(diffLeagueData(mergedPrevData, nextData));
           localStorage.setItem(STORAGE_KEYS.prevCareerCsv, prevCsv);
         } else {
           setPreviousData(null);
@@ -137,32 +206,51 @@ export const LeagueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const savedPrev = localStorage.getItem(STORAGE_KEYS.prevCareerCsv);
 
       if (savedCareer) {
-        setCareerData(parseCSV(savedCareer));
+        const parsedData = parseCSV(savedCareer);
+        const mergedData = await mergePlayerEdits(parsedData);
+        setCareerData(mergedData);
       }
 
       if (savedPrev) {
-        setPreviousData(parseCSV(savedPrev));
+        const parsedPrev = parseCSV(savedPrev);
+        const mergedPrev = await mergePlayerEdits(parsedPrev);
+        setPreviousData(mergedPrev);
         // If base missing, use the earliest known baseline.
         if (!baseCsv) localStorage.setItem(STORAGE_KEYS.careerBaseCsv, savedPrev);
       }
 
       if (savedCareer && savedPrev) {
-        const prev = parseCSV(savedPrev);
-        const next = parseCSV(savedCareer);
+        const prev = await mergePlayerEdits(parseCSV(savedPrev));
+        const next = await mergePlayerEdits(parseCSV(savedCareer));
         setSeasonData(diffLeagueData(prev, next));
         if (savedSeason) setCurrentSeason(savedSeason);
       } else {
         setCurrentSeason('');
       }
-    } catch {
-      // Ignore storage issues
+    } catch (error) {
+      console.error('Error rebuilding data:', error);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  const loadCareerData = useCallback((csvContent: string) => {
+  // Refresh data function - rebuilds all data and increments version
+  const refreshData = useCallback(() => {
+    rebuildDataFromStorage().then(() => {
+      setDataVersion((v) => v + 1);
+    });
+  }, [rebuildDataFromStorage]);
+
+  // Initial data load
+  useEffect(() => {
+    rebuildDataFromStorage();
+  }, [rebuildDataFromStorage]);
+
+  const loadCareerData = useCallback(async (csvContent: string) => {
     setIsLoading(true);
     try {
-      const data = parseCSV(csvContent);
+      const parsedData = parseCSV(csvContent);
+      const data = await mergePlayerEdits(parsedData);
       setCareerData(data);
 
       // Career upload = new baseline; clear any season diff context
@@ -178,6 +266,8 @@ export const LeagueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       saveSeasonSnapshots({});
       saveSeasonHistory({});
+      
+      setDataVersion((v) => v + 1);
     } catch (error) {
       console.error('Error parsing CSV:', error);
     } finally {
@@ -185,7 +275,7 @@ export const LeagueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
-  const loadSeasonData = useCallback((csvContent: string, seasonName: string) => {
+  const loadSeasonData = useCallback(async (csvContent: string, seasonName: string) => {
     setIsLoading(true);
     try {
       const baseCsv = localStorage.getItem(STORAGE_KEYS.careerBaseCsv);
@@ -199,13 +289,15 @@ export const LeagueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Choose previous snapshot by season number (works even after deleting + re-uploading)
       const prevCsv = getPrevCsvForSeason(seasonName, snapshots, inferredBaseCsv);
-      const next = parseCSV(csvContent);
+      const parsedNext = parseCSV(csvContent);
+      const next = await mergePlayerEdits(parsedNext);
 
       setCurrentSeason(seasonName);
       localStorage.setItem(STORAGE_KEYS.currentSeason, seasonName);
 
       if (prevCsv) {
-        const prev = parseCSV(prevCsv);
+        const parsedPrev = parseCSV(prevCsv);
+        const prev = await mergePlayerEdits(parsedPrev);
         setPreviousData(prev);
 
         const seasonDiff = diffLeagueData(prev, next);
@@ -244,6 +336,8 @@ export const LeagueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (inferredBaseCsv && !baseCsv) {
         localStorage.setItem(STORAGE_KEYS.careerBaseCsv, inferredBaseCsv);
       }
+      
+      setDataVersion((v) => v + 1);
     } catch (error) {
       console.error('Error parsing season CSV:', error);
     } finally {
@@ -286,7 +380,11 @@ export const LeagueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.removeItem(STORAGE_KEYS.prevCareerCsv);
 
     if (rollbackCsv) {
-      setCareerData(parseCSV(rollbackCsv));
+      const parsedData = parseCSV(rollbackCsv);
+      mergePlayerEdits(parsedData).then((merged) => {
+        setCareerData(merged);
+        setDataVersion((v) => v + 1);
+      });
       localStorage.setItem(STORAGE_KEYS.careerCsv, rollbackCsv);
     } else {
       setCareerData(null);
@@ -365,4 +463,3 @@ export const useLeague = () => {
   }
   return context;
 };
-
